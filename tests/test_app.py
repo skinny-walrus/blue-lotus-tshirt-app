@@ -20,9 +20,9 @@ def csrf(client) -> str:
     return client.get("/api/config").get_json()["csrf_token"]
 
 
-def valid_payload():
+def valid_payload(breed="Jagdterrier"):
     return {
-        "breed": "Jagdterrier",
+        "breed": breed,
         "color": "Pepper",
         "size": "M",
         "quantity": 1,
@@ -35,6 +35,8 @@ def test_home_and_health(tmp_path):
     assert response.status_code == 200
     assert b"Garment size" in response.data
     assert b"Prepare Printful-ready package" in response.data
+    assert b"Boston Terrier" in response.data
+    assert b"Red Doberman" in response.data
 
     health = client.get("/api/health").get_json()
     assert health == {
@@ -47,12 +49,23 @@ def test_home_and_health(tmp_path):
 def test_draft_validation_and_unavailable_breed(tmp_path):
     client = make_client(tmp_path)
     token = csrf(client)
-    response = client.post("/api/drafts", json=valid_payload(), headers={"X-CSRF-Token": token})
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data["selection"]["size"] == "M"
-    assert data["production_check"]["source_has_transparency"] is True
-    assert data["production_check"]["ready_without_upscaling"] is False
+    expected_ready = {
+        "Jagdterrier": False,
+        "Boston Terrier": True,
+        "Red Doberman": True,
+    }
+    for breed, production_ready in expected_ready.items():
+        response = client.post(
+            "/api/drafts",
+            json=valid_payload(breed),
+            headers={"X-CSRF-Token": token},
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["selection"]["breed"] == breed
+        assert data["production_check"]["source_has_transparency"] is True
+        assert data["production_check"]["meaningful_transparency"] is True
+        assert data["production_check"]["production_ready"] is production_ready
 
     unavailable = valid_payload() | {"breed": "Labrador Retriever"}
     response = client.post("/api/drafts", json=unavailable, headers={"X-CSRF-Token": token})
@@ -74,7 +87,7 @@ def test_prepare_requires_csrf_and_approval(tmp_path):
 def test_prepares_verified_png_and_stops_before_printful(tmp_path):
     client = make_client(tmp_path)
     token = csrf(client)
-    payload = valid_payload() | {
+    payload = valid_payload("Red Doberman") | {
         "approved": True,
         "recipient": {
             "name": "Test Recipient",
@@ -94,7 +107,8 @@ def test_prepares_verified_png_and_stops_before_printful(tmp_path):
     assert data["verification"]["pixels"] == [2700, 3450]
     assert data["verification"]["dpi"] == [300, 300]
     assert data["verification"]["transparent_alpha"] is True
-    assert data["verification"]["upscaled"] is True
+    assert data["verification"]["upscaled"] is False
+    assert data["printful_handoff"]["item"]["front_placement"] == "front"
 
     download = client.get(data["download_url"])
     assert download.status_code == 200
