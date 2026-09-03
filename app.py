@@ -26,6 +26,8 @@ COLORS = {
 SIZES = ("S", "M", "L", "XL", "2XL")
 BREEDS = (
     "Jagdterrier",
+    "Boston Terrier",
+    "Red Doberman",
     "French Bulldog",
     "Labrador Retriever",
     "Golden Retriever",
@@ -37,6 +39,12 @@ BREEDS = (
     "German Shorthaired Pointer",
     "Bulldog",
 )
+
+ARTWORKS = {
+    "Jagdterrier": "jagdterrier-loving-kindness.png",
+    "Boston Terrier": "boston-terrier-loving-kindness.png",
+    "Red Doberman": "red-doberman-loving-kindness.png",
+}
 
 
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
@@ -76,9 +84,15 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     @app.get("/")
     def home():
+        artwork_checks = {
+            breed: _inspect_source(BASE_DIR / "static" / filename)
+            for breed, filename in ARTWORKS.items()
+        }
         return render_template(
             "app.html",
             breeds=BREEDS,
+            artworks=ARTWORKS,
+            artwork_checks=artwork_checks,
             colors=COLORS,
             sizes=SIZES,
             csrf_token=csrf_token(),
@@ -93,7 +107,14 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         return jsonify(
             {
                 "ok": True,
-                "breeds": [{"name": name, "available": name == "Jagdterrier"} for name in BREEDS],
+                "breeds": [
+                    {
+                        "name": name,
+                        "available": name in ARTWORKS,
+                        "artwork": ARTWORKS.get(name),
+                    }
+                    for name in BREEDS
+                ],
                 "colors": [{"name": name, **details} for name, details in COLORS.items()],
                 "sizes": SIZES,
                 "production": {
@@ -112,7 +133,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     def create_draft():
         payload = _json_payload()
         selection = _validate_selection(payload)
-        source = _inspect_source(BASE_DIR / "static" / "jagdterrier-loving-kindness.png")
+        source = _inspect_source(_artwork_path(selection["breed"]))
         return jsonify(
             {
                 "ok": True,
@@ -132,10 +153,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         recipient = _validate_recipient(payload.get("recipient"))
 
         draft_id = str(uuid.uuid4())
-        filename = f"blue-lotus-jagdterrier-{selection['color'].lower()}-{selection['size'].lower()}-{draft_id[:8]}.png"
+        breed_slug = selection["breed"].lower().replace(" ", "-")
+        filename = f"blue-lotus-{breed_slug}-{selection['color'].lower()}-{selection['size'].lower()}-{draft_id[:8]}.png"
         output_path = export_dir / filename
         verification = _prepare_print_file(
-            BASE_DIR / "static" / "jagdterrier-loving-kindness.png",
+            _artwork_path(selection["breed"]),
             output_path,
         )
         handoff = _build_printful_handoff(selection, recipient, draft_id)
@@ -192,7 +214,7 @@ def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
 
     if breed not in BREEDS:
         abort(400, description="Choose a listed dog breed.")
-    if breed != "Jagdterrier":
+    if breed not in ARTWORKS:
         abort(400, description=f"{breed} artwork is still coming soon.")
     if color not in COLORS:
         abort(400, description="Choose an available garment color.")
@@ -208,9 +230,16 @@ def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
         "color": color,
         "size": size,
         "quantity": quantity,
-        "front": "Jagdterrier large artwork",
+        "front": f"{breed} large artwork",
         "back": "Blue Lotus logo below collar",
     }
+
+
+def _artwork_path(breed: str) -> Path:
+    filename = ARTWORKS.get(breed)
+    if not filename:
+        abort(400, description=f"{breed} artwork is still coming soon.")
+    return BASE_DIR / "static" / filename
 
 
 def _validate_recipient(value: Any) -> dict[str, str]:
@@ -244,17 +273,30 @@ def _inspect_source(path: Path) -> dict[str, Any]:
     with Image.open(path) as image:
         width, height = image.size
         has_alpha = image.mode in ("RGBA", "LA") or "transparency" in image.info
+        transparent_pixels = 0
+        if has_alpha:
+            alpha = image.convert("RGBA").getchannel("A")
+            transparent_pixels = sum(alpha.histogram()[:-1])
+        transparent_ratio = transparent_pixels / (width * height)
     effective_dpi = round(min(width / PRINT_WIDTH_IN, height / PRINT_HEIGHT_IN), 1)
+    adequate_size = width >= TARGET_PIXELS[0] and height >= TARGET_PIXELS[1]
+    meaningful_transparency = transparent_ratio >= 0.01
+    warnings = []
+    if not adequate_size:
+        warnings.append("The approved artwork is smaller than the 300 DPI production target and must be upscaled.")
+    if not meaningful_transparency:
+        warnings.append("The file does not contain meaningful transparent background area.")
     return {
         "source_pixels": [width, height],
         "source_has_transparency": has_alpha,
+        "transparent_pixel_ratio": round(transparent_ratio, 4),
+        "meaningful_transparency": meaningful_transparency,
         "effective_dpi_at_target_size": effective_dpi,
         "target_pixels": list(TARGET_PIXELS),
         "target_dpi": TARGET_DPI,
-        "ready_without_upscaling": width >= TARGET_PIXELS[0] and height >= TARGET_PIXELS[1],
-        "warning": None
-        if width >= TARGET_PIXELS[0] and height >= TARGET_PIXELS[1]
-        else "The approved mockup artwork is smaller than the 300 DPI production target and must be upscaled.",
+        "ready_without_upscaling": adequate_size,
+        "production_ready": adequate_size and meaningful_transparency,
+        "warning": " ".join(warnings) or None,
     }
 
 

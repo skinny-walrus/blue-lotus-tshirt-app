@@ -21,12 +21,14 @@ Open `http://127.0.0.1:5000`.
 The app currently provides:
 
 - approved breed, design, garment color, size, and quantity selection;
+- selectable Jagdterrier, Boston Terrier, and Red Doberman artwork;
 - front/back garment preview;
 - design approval reset whenever production choices change;
 - U.S. shipping-field validation;
 - exact 2,700 × 3,450 transparent PNG output with 300 DPI metadata;
 - a structured preview of the future Printful order payload;
-- clear disclosure that the current 1,111 × 1,415 mockup source needs a higher-resolution approved master before live fulfillment.
+- verified 3,300 × 4,200, 300 DPI transparent masters for Boston Terrier and Red Doberman;
+- clear disclosure that the clean Jagdterrier source still needs a higher-resolution transparent master before live fulfillment.
 
 The next phase will add Printful authentication, catalog variant mapping, cost and shipping estimates, draft-order creation, explicit payment approval, and webhook status updates.
 
