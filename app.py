@@ -21,8 +21,9 @@ COLORS = {
     "Pepper": {"hex": "#5c5a55", "filter": "grayscale(1) brightness(.82) contrast(.92)"},
     "Navy": {"hex": "#25344b", "filter": "grayscale(.35) sepia(.35) hue-rotate(170deg) saturate(1.3) brightness(.45)"},
     "Moss": {"hex": "#73765f", "filter": "grayscale(.35) sepia(.72) hue-rotate(38deg) saturate(.72) brightness(.68)"},
-    "Ivory": {"hex": "#ebe3cf", "filter": "grayscale(1) sepia(.28) saturate(.58) brightness(1.72) contrast(.62)"},
-    "Bay": {"hex": "#6f8989", "filter": "grayscale(.25) sepia(.3) hue-rotate(125deg) saturate(.75) brightness(.85)"},
+    # Printful catalog product 586 (Comfort Colors 1717) color codes.
+    "Ivory": {"hex": "#fff4d9", "filter": "grayscale(.963) sepia(.740) saturate(.803) hue-rotate(350.5deg) brightness(2.803) contrast(.949)"},
+    "Bay": {"hex": "#b8bfab", "filter": "grayscale(.991) sepia(.169) saturate(1.905) hue-rotate(52.7deg) brightness(2.676) contrast(.682)"},
 }
 SIZES = ("S", "M", "L", "XL", "2XL")
 BREEDS = (
