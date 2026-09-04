@@ -29,24 +29,25 @@ SIZES = ("S", "M", "L", "XL", "2XL")
 BREEDS = (
     "Jagdterrier",
     "Boston Terrier",
-    "Red Doberman",
     "Dachshund",
     "French Bulldog",
     "Labrador Retriever",
     "Golden Retriever",
-    "German Shepherd Dog",
-    "Poodle",
     "Beagle",
     "Rottweiler",
-    "German Shorthaired Pointer",
-    "Bulldog",
+    "Pit Bull",
 )
 
 ARTWORKS = {
     "Jagdterrier": "jagdterrier-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
-    "Red Doberman": "red-doberman-loving-kindness.png",
     "Dachshund": "dachshund-loving-kindness.png",
+    "French Bulldog": "french-bulldog-loving-kindness.png",
+    "Labrador Retriever": "labrador-retriever-loving-kindness.png",
+    "Golden Retriever": "golden-retriever-loving-kindness.png",
+    "Beagle": "beagle-loving-kindness.png",
+    "Rottweiler": "rottweiler-loving-kindness.png",
+    "Pit Bull": "pit-bull-loving-kindness.png",
 }
 
 
