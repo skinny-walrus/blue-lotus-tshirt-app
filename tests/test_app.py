@@ -40,7 +40,11 @@ def test_home_and_health(tmp_path):
     assert b"Dachshund" in response.data
     assert b"Navy" in response.data
     assert b"Bay" in response.data
+    assert b"#b8bfab" in response.data
+    assert b"#fff4d9" in response.data
     assert b"moss-shirt-back.png" in response.data
+    assert b"left:-95.7%" in response.data
+    assert b"width:14.4%;left:50%" in response.data
 
     health = client.get("/api/health").get_json()
     assert health == {
