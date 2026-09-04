@@ -39,6 +39,7 @@ def test_home_and_health(tmp_path):
     assert b"Dachshund" in response.data
     assert b"Pit Bull" in response.data
     assert b"Rottweiler" in response.data
+    assert b"German Shepherd" in response.data
     assert b"\xc2\xb7 Available" not in response.data
     assert b"\xc2\xb7 Coming soon" not in response.data
     assert b"Navy" in response.data
@@ -70,6 +71,7 @@ def test_draft_validation_and_unlisted_breed(tmp_path):
         "Beagle": True,
         "Rottweiler": True,
         "Pit Bull": True,
+        "German Shepherd": True,
     }
     for breed, production_ready in expected_ready.items():
         response = client.post(
@@ -84,7 +86,7 @@ def test_draft_validation_and_unlisted_breed(tmp_path):
         assert data["production_check"]["meaningful_transparency"] is True
         assert data["production_check"]["production_ready"] is production_ready
 
-    unavailable = valid_payload() | {"breed": "German Shepherd Dog"}
+    unavailable = valid_payload() | {"breed": "Poodle"}
     response = client.post("/api/drafts", json=unavailable, headers={"X-CSRF-Token": token})
     assert response.status_code == 400
     assert "listed dog breed" in response.get_json()["error"]
