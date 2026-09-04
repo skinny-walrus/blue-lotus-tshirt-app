@@ -36,6 +36,7 @@ BREEDS = (
     "Beagle",
     "Rottweiler",
     "Pit Bull",
+    "German Shepherd",
 )
 
 ARTWORKS = {
@@ -48,6 +49,7 @@ ARTWORKS = {
     "Beagle": "beagle-loving-kindness.png",
     "Rottweiler": "rottweiler-loving-kindness.png",
     "Pit Bull": "pit-bull-loving-kindness.png",
+    "German Shepherd": "german-shepherd-loving-kindness.png",
 }
 
 
