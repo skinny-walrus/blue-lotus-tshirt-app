@@ -18,21 +18,22 @@ PRINT_WIDTH_IN = 9
 PRINT_HEIGHT_IN = 11.5
 
 COLORS = {
-    "Pepper": {"hex": "#5d5d59", "filter": "grayscale(1) brightness(.82) contrast(.92)"},
-    "Black": {"hex": "#171817", "filter": "grayscale(1) brightness(.3) contrast(1.12)"},
-    "Moss": {"hex": "#68705b", "filter": "grayscale(.35) sepia(.72) hue-rotate(38deg) saturate(.72) brightness(.68)"},
+    "Pepper": {"hex": "#5c5a55", "filter": "grayscale(1) brightness(.82) contrast(.92)"},
+    "Navy": {"hex": "#25344b", "filter": "grayscale(.35) sepia(.35) hue-rotate(170deg) saturate(1.3) brightness(.45)"},
+    "Moss": {"hex": "#73765f", "filter": "grayscale(.35) sepia(.72) hue-rotate(38deg) saturate(.72) brightness(.68)"},
     "Ivory": {"hex": "#ebe3cf", "filter": "grayscale(1) sepia(.28) saturate(.58) brightness(1.72) contrast(.62)"},
+    "Bay": {"hex": "#6f8989", "filter": "grayscale(.25) sepia(.3) hue-rotate(125deg) saturate(.75) brightness(.85)"},
 }
 SIZES = ("S", "M", "L", "XL", "2XL")
 BREEDS = (
     "Jagdterrier",
     "Boston Terrier",
     "Red Doberman",
+    "Dachshund",
     "French Bulldog",
     "Labrador Retriever",
     "Golden Retriever",
     "German Shepherd Dog",
-    "Dachshund",
     "Poodle",
     "Beagle",
     "Rottweiler",
@@ -44,6 +45,7 @@ ARTWORKS = {
     "Jagdterrier": "jagdterrier-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
     "Red Doberman": "red-doberman-loving-kindness.png",
+    "Dachshund": "dachshund-loving-kindness.png",
 }
 
 
