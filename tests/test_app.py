@@ -36,8 +36,11 @@ def test_home_and_health(tmp_path):
     assert b"Garment size" in response.data
     assert b"Prepare Printful-ready package" in response.data
     assert b"Boston Terrier" in response.data
-    assert b"Red Doberman" in response.data
     assert b"Dachshund" in response.data
+    assert b"Pit Bull" in response.data
+    assert b"Rottweiler" in response.data
+    assert b"\xc2\xb7 Available" not in response.data
+    assert b"\xc2\xb7 Coming soon" not in response.data
     assert b"Navy" in response.data
     assert b"Bay" in response.data
     assert b"#b8bfab" in response.data
@@ -54,14 +57,19 @@ def test_home_and_health(tmp_path):
     }
 
 
-def test_draft_validation_and_unavailable_breed(tmp_path):
+def test_draft_validation_and_unlisted_breed(tmp_path):
     client = make_client(tmp_path)
     token = csrf(client)
     expected_ready = {
-        "Jagdterrier": False,
+        "Jagdterrier": True,
         "Boston Terrier": True,
-        "Red Doberman": True,
-        "Dachshund": False,
+        "Dachshund": True,
+        "French Bulldog": True,
+        "Labrador Retriever": True,
+        "Golden Retriever": True,
+        "Beagle": True,
+        "Rottweiler": True,
+        "Pit Bull": True,
     }
     for breed, production_ready in expected_ready.items():
         response = client.post(
@@ -76,10 +84,10 @@ def test_draft_validation_and_unavailable_breed(tmp_path):
         assert data["production_check"]["meaningful_transparency"] is True
         assert data["production_check"]["production_ready"] is production_ready
 
-    unavailable = valid_payload() | {"breed": "Labrador Retriever"}
+    unavailable = valid_payload() | {"breed": "German Shepherd Dog"}
     response = client.post("/api/drafts", json=unavailable, headers={"X-CSRF-Token": token})
     assert response.status_code == 400
-    assert "coming soon" in response.get_json()["error"]
+    assert "listed dog breed" in response.get_json()["error"]
 
 
 def test_prepare_requires_csrf_and_approval(tmp_path):
@@ -96,7 +104,7 @@ def test_prepare_requires_csrf_and_approval(tmp_path):
 def test_prepares_verified_png_and_stops_before_printful(tmp_path):
     client = make_client(tmp_path)
     token = csrf(client)
-    payload = valid_payload("Red Doberman") | {
+    payload = valid_payload("Pit Bull") | {
         "approved": True,
         "recipient": {
             "name": "Test Recipient",
