@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import os
 import secrets
-import time
+import sqlite3
+import urllib.error
+import urllib.request
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, abort, jsonify, render_template, request, send_file, session
+from flask import Flask, abort, jsonify, render_template, request, send_file, session, url_for
 from PIL import Image
 
 
@@ -16,29 +22,17 @@ TARGET_PIXELS = (2700, 3450)
 TARGET_DPI = 300
 PRINT_WIDTH_IN = 9
 PRINT_HEIGHT_IN = 11.5
+BASE_PRICE_CENTS = 3495
+TWO_XL_SURCHARGE_CENTS = 300
 
 COLORS = {
     "Pepper": {"hex": "#5c5a55", "filter": "grayscale(1) brightness(.82) contrast(.92)"},
     "Navy": {"hex": "#25344b", "filter": "grayscale(.35) sepia(.35) hue-rotate(170deg) saturate(1.3) brightness(.45)"},
     "Moss": {"hex": "#73765f", "filter": "grayscale(.35) sepia(.72) hue-rotate(38deg) saturate(.72) brightness(.68)"},
-    # Printful catalog product 586 (Comfort Colors 1717) color codes.
     "Ivory": {"hex": "#fff4d9", "filter": "grayscale(.963) sepia(.740) saturate(.803) hue-rotate(350.5deg) brightness(2.803) contrast(.949)"},
     "Bay": {"hex": "#b8bfab", "filter": "grayscale(.991) sepia(.169) saturate(1.905) hue-rotate(52.7deg) brightness(2.676) contrast(.682)"},
 }
 SIZES = ("S", "M", "L", "XL", "2XL")
-BREEDS = (
-    "Jagdterrier",
-    "Boston Terrier",
-    "Dachshund",
-    "French Bulldog",
-    "Labrador Retriever",
-    "Golden Retriever",
-    "Beagle",
-    "Rottweiler",
-    "Pit Bull",
-    "German Shepherd",
-)
-
 ARTWORKS = {
     "Jagdterrier": "jagdterrier-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
@@ -51,6 +45,13 @@ ARTWORKS = {
     "Pit Bull": "pit-bull-loving-kindness.png",
     "German Shepherd": "german-shepherd-loving-kindness.png",
 }
+BREEDS = tuple(ARTWORKS)
+POLICIES = {
+    "shipping": ("Shipping", "Each shirt is made to order. Most orders are produced in 2–5 business days, followed by carrier transit time. Tracking is emailed as soon as it is available."),
+    "returns": ("Returns & exchanges", "Because each item is made to order, we replace items that arrive damaged, misprinted, or incorrect. Contact us within 30 days of delivery with your order number and a photo. Size exchanges for correctly fulfilled items are not currently offered."),
+    "privacy": ("Privacy", "We use customer contact and shipping details only to process, fulfill, and support orders. Payment details are entered directly on Stripe's secure checkout and are not stored by this website."),
+    "terms": ("Terms", "Product previews are representative. Garment-dyed shirts naturally vary slightly in color. By ordering, you authorize the stated product, shipping, and tax charges shown at checkout."),
+}
 
 
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
@@ -59,24 +60,36 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32),
         MAX_CONTENT_LENGTH=64 * 1024,
         EXPORT_DIR=Path(os.environ.get("EXPORT_DIR", "/tmp/blue-lotus-exports")),
-        PRINTFUL_CONNECTED=False,
+        ORDER_DATABASE=Path(os.environ.get("ORDER_DATABASE", BASE_DIR / "instance" / "orders.sqlite3")),
+        STRIPE_SECRET_KEY=os.environ.get("STRIPE_SECRET_KEY", ""),
+        STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
+        STRIPE_AUTOMATIC_TAX=os.environ.get("STRIPE_AUTOMATIC_TAX", "true").lower() == "true",
+        PRINTFUL_TOKEN=os.environ.get("PRINTFUL_TOKEN", ""),
+        PRINTFUL_STORE_ID=os.environ.get("PRINTFUL_STORE_ID", ""),
+        PRINTFUL_VARIANT_IDS=os.environ.get("PRINTFUL_VARIANT_IDS", "{}"),
+        PRINTFUL_WEBHOOK_TOKEN=os.environ.get("PRINTFUL_WEBHOOK_TOKEN", ""),
+        CHECKOUT_TEST_MODE=False,
     )
     if test_config:
         app.config.update(test_config)
 
-    export_dir = Path(app.config["EXPORT_DIR"])
-    export_dir.mkdir(parents=True, exist_ok=True)
-    prepared_orders: dict[str, dict[str, Any]] = {}
+    Path(app.config["EXPORT_DIR"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["ORDER_DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
+    _init_database(app.config["ORDER_DATABASE"])
 
     def csrf_token() -> str:
         if "csrf_token" not in session:
             session["csrf_token"] = secrets.token_urlsafe(24)
         return session["csrf_token"]
 
+    def checkout_ready() -> bool:
+        return bool(app.config["STRIPE_SECRET_KEY"] and app.config["STRIPE_WEBHOOK_SECRET"])
+
     @app.before_request
     def protect_api() -> None:
         if request.method == "POST" and request.path.startswith("/api/"):
-            if not secrets.compare_digest(request.headers.get("X-CSRF-Token", ""), csrf_token()):
+            supplied = request.headers.get("X-CSRF-Token", "")
+            if not secrets.compare_digest(supplied, csrf_token()):
                 abort(403, description="The page security token is missing or expired. Refresh and try again.")
 
     @app.errorhandler(400)
@@ -86,118 +99,166 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     def api_error(error):
         if request.path.startswith("/api/"):
             return jsonify({"ok": False, "error": getattr(error, "description", "Request failed")}), error.code
-        return error
+        return render_template("policies.html", title="Page not found", body="That page could not be found."), error.code
 
     @app.get("/")
     def home():
-        artwork_checks = {
-            breed: _inspect_source(BASE_DIR / "static" / filename)
-            for breed, filename in ARTWORKS.items()
-        }
         return render_template(
-            "app.html",
-            breeds=BREEDS,
-            artworks=ARTWORKS,
-            artwork_checks=artwork_checks,
-            colors=COLORS,
-            sizes=SIZES,
-            csrf_token=csrf_token(),
+            "app.html", breeds=BREEDS, artworks=ARTWORKS, colors=COLORS, sizes=SIZES,
+            csrf_token=csrf_token(), base_price_cents=BASE_PRICE_CENTS,
+            two_xl_surcharge_cents=TWO_XL_SURCHARGE_CENTS, checkout_configured=checkout_ready(),
         )
 
     @app.get("/api/health")
     def health():
-        return jsonify({"ok": True, "service": "blue-lotus-tshirt-app", "printful_connected": False})
+        return jsonify({
+            "ok": True, "service": "blue-lotus-tshirt-store",
+            "checkout_configured": checkout_ready(),
+            "printful_connected": bool(app.config["PRINTFUL_TOKEN"]),
+        })
 
     @app.get("/api/config")
     def config():
-        return jsonify(
-            {
-                "ok": True,
-                "breeds": [
-                    {
-                        "name": name,
-                        "available": name in ARTWORKS,
-                        "artwork": ARTWORKS.get(name),
-                    }
-                    for name in BREEDS
-                ],
-                "colors": [{"name": name, **details} for name, details in COLORS.items()],
-                "sizes": SIZES,
-                "production": {
-                    "width_inches": PRINT_WIDTH_IN,
-                    "height_inches": PRINT_HEIGHT_IN,
-                    "dpi": TARGET_DPI,
-                    "pixels": TARGET_PIXELS,
-                    "transparent_png": True,
-                },
-                "printful_connected": False,
-                "csrf_token": csrf_token(),
-            }
-        )
+        return jsonify({
+            "ok": True,
+            "breeds": [{"name": name, "artwork": ARTWORKS[name]} for name in BREEDS],
+            "colors": [{"name": name, **details} for name, details in COLORS.items()],
+            "sizes": SIZES,
+            "pricing": {"base_cents": BASE_PRICE_CENTS, "2xl_surcharge_cents": TWO_XL_SURCHARGE_CENTS, "currency": "usd"},
+            "checkout_configured": checkout_ready(), "csrf_token": csrf_token(),
+        })
 
-    @app.post("/api/drafts")
-    def create_draft():
+    @app.post("/api/checkout")
+    def create_checkout():
         payload = _json_payload()
-        selection = _validate_selection(payload)
-        source = _inspect_source(_artwork_path(selection["breed"]))
-        return jsonify(
-            {
-                "ok": True,
-                "draft_id": str(uuid.uuid4()),
-                "selection": selection,
-                "production_check": source,
-                "message": "Draft validated. No Printful order or charge was created.",
-            }
-        )
+        raw_items = payload.get("items")
+        if not isinstance(raw_items, list) or not raw_items or len(raw_items) > 20:
+            abort(400, description="Your cart must contain between 1 and 20 items.")
+        items = [_price_item(_validate_selection(item)) for item in raw_items]
+        order_id = uuid.uuid4().hex
+        total_cents = sum(item["line_total_cents"] for item in items)
+        _save_order(app.config["ORDER_DATABASE"], order_id, "pending", items, total_cents)
 
+        if app.config["CHECKOUT_TEST_MODE"]:
+            _update_order(app.config["ORDER_DATABASE"], order_id, "test_ready")
+            return jsonify({"ok": True, "order_id": order_id, "checkout_url": url_for("order_status", order_id=order_id)})
+
+        if not checkout_ready():
+            _update_order(app.config["ORDER_DATABASE"], order_id, "checkout_unavailable")
+            return jsonify({
+                "ok": False, "order_id": order_id,
+                "error": "Secure checkout is being connected. No payment was taken.",
+            }), 503
+
+        try:
+            import stripe
+
+            stripe.api_key = app.config["STRIPE_SECRET_KEY"]
+            checkout = stripe.checkout.Session.create(
+                mode="payment",
+                customer_creation="always",
+                billing_address_collection="auto",
+                shipping_address_collection={"allowed_countries": ["US"]},
+                automatic_tax={"enabled": app.config["STRIPE_AUTOMATIC_TAX"]},
+                allow_promotion_codes=True,
+                success_url=url_for("order_status", order_id=order_id, _external=True) + "?paid=1",
+                cancel_url=url_for("home", _external=True) + "?checkout=cancelled",
+                metadata={"order_id": order_id},
+                line_items=[{
+                    "quantity": item["quantity"],
+                    "price_data": {
+                        "currency": "usd", "unit_amount": item["unit_price_cents"],
+                        "product_data": {
+                            "name": f"{item['breed']} Choose Loving Kindness T-Shirt",
+                            "description": f"Comfort Colors 1717 · {item['color']} · {item['size']}",
+                            "images": [url_for("static", filename=ARTWORKS[item["breed"]], _external=True)],
+                        },
+                    },
+                } for item in items],
+            )
+        except Exception:
+            app.logger.exception("Stripe checkout session creation failed")
+            _update_order(app.config["ORDER_DATABASE"], order_id, "checkout_error")
+            return jsonify({"ok": False, "error": "Secure checkout is temporarily unavailable. No payment was taken."}), 502
+
+        _update_order(app.config["ORDER_DATABASE"], order_id, "awaiting_payment", stripe_session_id=checkout.id)
+        return jsonify({"ok": True, "order_id": order_id, "checkout_url": checkout.url})
+
+    @app.post("/webhooks/stripe")
+    def stripe_webhook():
+        if not checkout_ready():
+            abort(404)
+        try:
+            import stripe
+
+            event = stripe.Webhook.construct_event(
+                request.get_data(), request.headers.get("Stripe-Signature", ""), app.config["STRIPE_WEBHOOK_SECRET"]
+            )
+        except Exception:
+            return "Invalid webhook", 400
+        if event["type"] == "checkout.session.completed":
+            checkout = event["data"]["object"]
+            order_id = checkout.get("metadata", {}).get("order_id")
+            if order_id:
+                shipping = checkout.get("shipping_details") or checkout.get("customer_details") or {}
+                _update_order(app.config["ORDER_DATABASE"], order_id, "paid", customer=shipping)
+                if app.config["PRINTFUL_TOKEN"]:
+                    try:
+                        printful_id = _submit_printful_order(app, order_id, checkout, shipping)
+                        _update_order(app.config["ORDER_DATABASE"], order_id, "submitted_to_printful", printful_id=str(printful_id))
+                    except Exception:
+                        app.logger.exception("Printful submission failed for %s", order_id)
+                        _update_order(app.config["ORDER_DATABASE"], order_id, "fulfillment_attention")
+        return "", 204
+
+    @app.post("/webhooks/printful/<token>")
+    def printful_webhook(token: str):
+        expected = app.config["PRINTFUL_WEBHOOK_TOKEN"]
+        if not expected or not hmac.compare_digest(token, expected):
+            abort(404)
+        event = request.get_json(silent=True) or {}
+        data = event.get("data") or {}
+        order = data.get("order") or {}
+        external_id = order.get("external_id")
+        if external_id:
+            status = str(event.get("type", "printful_update"))
+            tracking = (data.get("shipment") or {}).get("tracking_url")
+            _update_order(app.config["ORDER_DATABASE"], external_id, status, tracking_url=tracking)
+        return "", 204
+
+    @app.get("/order/<order_id>")
+    def order_status(order_id: str):
+        order = _get_order(app.config["ORDER_DATABASE"], order_id)
+        if not order:
+            abort(404)
+        return render_template("order.html", order=order)
+
+    @app.get("/policies/<name>")
+    def policy(name: str):
+        if name not in POLICIES:
+            abort(404)
+        return render_template("policies.html", title=POLICIES[name][0], body=POLICIES[name][1])
+
+    # Kept as a staff-side production check while the public storefront uses checkout.
     @app.post("/api/prepare")
-    def prepare_order():
+    def prepare_print_file():
         payload = _json_payload()
         selection = _validate_selection(payload)
         if payload.get("approved") is not True:
-            abort(400, description="Approve the design before preparing the order package.")
-        recipient = _validate_recipient(payload.get("recipient"))
+            abort(400, description="Approve the design before preparing the print file.")
+        draft_id = uuid.uuid4().hex
+        filename = f"blue-lotus-{selection['breed'].lower().replace(' ', '-')}-{draft_id[:8]}.png"
+        output = Path(app.config["EXPORT_DIR"]) / filename
+        verification = _prepare_print_file(_artwork_path(selection["breed"]), output)
+        return jsonify({"ok": True, "draft_id": draft_id, "verification": verification, "download_url": url_for("staff_print_file", filename=filename)})
 
-        draft_id = str(uuid.uuid4())
-        breed_slug = selection["breed"].lower().replace(" ", "-")
-        filename = f"blue-lotus-{breed_slug}-{selection['color'].lower()}-{selection['size'].lower()}-{draft_id[:8]}.png"
-        output_path = export_dir / filename
-        verification = _prepare_print_file(
-            _artwork_path(selection["breed"]),
-            output_path,
-        )
-        handoff = _build_printful_handoff(selection, recipient, draft_id)
-        prepared_orders[draft_id] = {
-            "created_at": time.time(),
-            "path": output_path,
-            "filename": filename,
-            "handoff": handoff,
-        }
-        _prune_prepared(prepared_orders)
-
-        return jsonify(
-            {
-                "ok": True,
-                "draft_id": draft_id,
-                "status": "ready_for_printful_connection",
-                "download_url": f"/api/print-file/{draft_id}",
-                "verification": verification,
-                "printful_handoff": handoff,
-                "message": "Order package prepared. Nothing was sent to Printful and no charge was created.",
-            }
-        )
-
-    @app.get("/api/print-file/<draft_id>")
-    def download_print_file(draft_id: str):
-        prepared = prepared_orders.get(draft_id)
-        if not prepared or not Path(prepared["path"]).is_file():
-            abort(404, description="That prepared file is no longer available. Prepare it again.")
-        return send_file(
-            prepared["path"],
-            mimetype="image/png",
-            as_attachment=True,
-            download_name=prepared["filename"],
-        )
+    @app.get("/api/print-file/<filename>")
+    def staff_print_file(filename: str):
+        safe_name = Path(filename).name
+        path = Path(app.config["EXPORT_DIR"]) / safe_name
+        if not path.is_file():
+            abort(404, description="That prepared file is no longer available.")
+        return send_file(path, mimetype="image/png", as_attachment=True, download_name=safe_name)
 
     return app
 
@@ -210,162 +271,144 @@ def _json_payload() -> dict[str, Any]:
 
 
 def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
-    breed = str(payload.get("breed", "")).strip()
-    color = str(payload.get("color", "")).strip()
-    size = str(payload.get("size", "")).strip()
+    breed, color, size = (str(payload.get(key, "")).strip() for key in ("breed", "color", "size"))
     try:
         quantity = int(payload.get("quantity", 1))
     except (TypeError, ValueError):
         abort(400, description="Quantity must be a whole number.")
-
-    if breed not in BREEDS:
-        abort(400, description="Choose a listed dog breed.")
     if breed not in ARTWORKS:
-        abort(400, description=f"{breed} artwork is still coming soon.")
+        abort(400, description="Choose an available dog breed.")
     if color not in COLORS:
         abort(400, description="Choose an available garment color.")
     if size not in SIZES:
         abort(400, description="Choose an available garment size.")
     if not 1 <= quantity <= 10:
         abort(400, description="Quantity must be between 1 and 10.")
+    return {"breed": breed, "color": color, "size": size, "quantity": quantity, "design": "Choose Loving Kindness", "garment": "Comfort Colors 1717"}
 
-    return {
-        "breed": breed,
-        "design": "Choose Loving Kindness",
-        "garment": "Comfort Colors 1717",
-        "color": color,
-        "size": size,
-        "quantity": quantity,
-        "front": f"{breed} large artwork",
-        "back": "Blue Lotus logo below collar",
-    }
+
+def _price_item(selection: dict[str, Any]) -> dict[str, Any]:
+    unit = BASE_PRICE_CENTS + (TWO_XL_SURCHARGE_CENTS if selection["size"] == "2XL" else 0)
+    return {**selection, "unit_price_cents": unit, "line_total_cents": unit * selection["quantity"], "artwork": ARTWORKS[selection["breed"]]}
 
 
 def _artwork_path(breed: str) -> Path:
-    filename = ARTWORKS.get(breed)
-    if not filename:
-        abort(400, description=f"{breed} artwork is still coming soon.")
-    return BASE_DIR / "static" / filename
+    return BASE_DIR / "static" / ARTWORKS[breed]
 
 
-def _validate_recipient(value: Any) -> dict[str, str]:
-    if not isinstance(value, dict):
-        abort(400, description="Enter the shipping information before preparing the order package.")
-    fields = {
-        "name": "recipient name",
-        "address1": "street address",
-        "city": "city",
-        "state_code": "state",
-        "zip": "ZIP code",
-        "country_code": "country",
-        "email": "email address",
+def _init_database(path: Path) -> None:
+    with sqlite3.connect(path) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS orders (
+            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            status TEXT NOT NULL, total_cents INTEGER NOT NULL, items_json TEXT NOT NULL,
+            stripe_session_id TEXT, printful_id TEXT, customer_json TEXT, tracking_url TEXT
+        )""")
+
+
+def _save_order(path: Path, order_id: str, status: str, items: list[dict[str, Any]], total_cents: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    with sqlite3.connect(path) as db:
+        db.execute("INSERT INTO orders (id, created_at, updated_at, status, total_cents, items_json) VALUES (?, ?, ?, ?, ?, ?)",
+                   (order_id, now, now, status, total_cents, json.dumps(items)))
+
+
+def _update_order(path: Path, order_id: str, status: str, **values: Any) -> None:
+    allowed = {"stripe_session_id", "printful_id", "customer", "tracking_url"}
+    fields, params = ["status = ?", "updated_at = ?"], [status, datetime.now(timezone.utc).isoformat()]
+    for key, value in values.items():
+        if key not in allowed:
+            continue
+        column = "customer_json" if key == "customer" else key
+        fields.append(f"{column} = ?")
+        params.append(json.dumps(value) if key == "customer" else value)
+    params.append(order_id)
+    with sqlite3.connect(path) as db:
+        db.execute(f"UPDATE orders SET {', '.join(fields)} WHERE id = ?", params)
+
+
+def _get_order(path: Path, order_id: str) -> dict[str, Any] | None:
+    with sqlite3.connect(path) as db:
+        db.row_factory = sqlite3.Row
+        row = db.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    if not row:
+        return None
+    result = dict(row)
+    result["items"] = json.loads(result.pop("items_json"))
+    result["customer"] = json.loads(result.pop("customer_json")) if result.get("customer_json") else None
+    result.pop("customer_json", None)
+    return result
+
+
+def _variant_map(app: Flask) -> dict[str, int]:
+    try:
+        return {str(key): int(value) for key, value in json.loads(app.config["PRINTFUL_VARIANT_IDS"]).items()}
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+
+
+def _submit_printful_order(app: Flask, order_id: str, checkout: dict[str, Any], shipping: dict[str, Any]) -> int:
+    order = _get_order(app.config["ORDER_DATABASE"], order_id)
+    if not order:
+        raise ValueError("Order not found")
+    address = shipping.get("address") or {}
+    variants = _variant_map(app)
+    items = []
+    for item in order["items"]:
+        variant_id = variants.get(f"{item['color']}|{item['size']}")
+        if not variant_id:
+            raise ValueError(f"Missing Printful variant for {item['color']} {item['size']}")
+        items.append({
+            "variant_id": variant_id, "quantity": item["quantity"],
+            "files": [
+                {"type": "front", "url": url_for("static", filename=item["artwork"], _external=True)},
+                {"type": "back", "url": url_for("static", filename="blue-lotus-logo.png", _external=True)},
+            ],
+        })
+    payload = {
+        "external_id": order_id,
+        "recipient": {
+            "name": shipping.get("name") or (checkout.get("customer_details") or {}).get("name"),
+            "email": (checkout.get("customer_details") or {}).get("email"),
+            "address1": address.get("line1"), "address2": address.get("line2"),
+            "city": address.get("city"), "state_code": address.get("state"),
+            "country_code": address.get("country"), "zip": address.get("postal_code"),
+        },
+        "items": items,
     }
-    recipient: dict[str, str] = {}
-    for key, label in fields.items():
-        text = str(value.get(key, "")).strip()
-        if not text:
-            abort(400, description=f"Enter the {label}.")
-        if len(text) > 120:
-            abort(400, description=f"The {label} is too long.")
-        recipient[key] = text
-    if recipient["country_code"].upper() != "US":
-        abort(400, description="This first version supports U.S. shipping addresses only.")
-    recipient["country_code"] = "US"
-    recipient["state_code"] = recipient["state_code"].upper()
-    return recipient
-
-
-def _inspect_source(path: Path) -> dict[str, Any]:
-    with Image.open(path) as image:
-        width, height = image.size
-        has_alpha = image.mode in ("RGBA", "LA") or "transparency" in image.info
-        transparent_pixels = 0
-        if has_alpha:
-            alpha = image.convert("RGBA").getchannel("A")
-            transparent_pixels = sum(alpha.histogram()[:-1])
-        transparent_ratio = transparent_pixels / (width * height)
-    effective_dpi = round(min(width / PRINT_WIDTH_IN, height / PRINT_HEIGHT_IN), 1)
-    adequate_size = width >= TARGET_PIXELS[0] and height >= TARGET_PIXELS[1]
-    meaningful_transparency = transparent_ratio >= 0.01
-    warnings = []
-    if not adequate_size:
-        warnings.append("The approved artwork is smaller than the 300 DPI production target and must be upscaled.")
-    if not meaningful_transparency:
-        warnings.append("The file does not contain meaningful transparent background area.")
-    return {
-        "source_pixels": [width, height],
-        "source_has_transparency": has_alpha,
-        "transparent_pixel_ratio": round(transparent_ratio, 4),
-        "meaningful_transparency": meaningful_transparency,
-        "effective_dpi_at_target_size": effective_dpi,
-        "target_pixels": list(TARGET_PIXELS),
-        "target_dpi": TARGET_DPI,
-        "ready_without_upscaling": adequate_size,
-        "production_ready": adequate_size and meaningful_transparency,
-        "warning": " ".join(warnings) or None,
-    }
+    headers = {"Authorization": f"Bearer {app.config['PRINTFUL_TOKEN']}", "Content-Type": "application/json"}
+    if app.config["PRINTFUL_STORE_ID"]:
+        headers["X-PF-Store-Id"] = str(app.config["PRINTFUL_STORE_ID"])
+    req = urllib.request.Request("https://api.printful.com/orders?confirm=true", data=json.dumps(payload).encode(), headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(exc.read().decode(errors="replace")) from exc
+    return int(result["result"]["id"])
 
 
 def _prepare_print_file(source_path: Path, output_path: Path) -> dict[str, Any]:
     with Image.open(source_path) as source:
-        source = source.convert("RGBA")
-        source_width, source_height = source.size
-        scale = min(TARGET_PIXELS[0] / source_width, TARGET_PIXELS[1] / source_height)
-        resized_size = (round(source_width * scale), round(source_height * scale))
-        resized = source.resize(resized_size, Image.Resampling.LANCZOS)
-        canvas = Image.new("RGBA", TARGET_PIXELS, (0, 0, 0, 0))
-        canvas.alpha_composite(
-            resized,
-            ((TARGET_PIXELS[0] - resized.width) // 2, (TARGET_PIXELS[1] - resized.height) // 2),
-        )
-        canvas.save(output_path, format="PNG", dpi=(TARGET_DPI, TARGET_DPI), optimize=True)
-
+        source.load()
+        source_rgba = source.convert("RGBA")
+        if source_rgba.width < TARGET_PIXELS[0] or source_rgba.height < TARGET_PIXELS[1]:
+            raise ValueError(f"{source_path.name} is {source_rgba.size}; production requires at least {TARGET_PIXELS} without upscaling")
+        if source_rgba.getextrema()[3] == (255, 255):
+            raise ValueError(f"{source_path.name} does not contain transparency")
+        if source_rgba.size != TARGET_PIXELS:
+            source_rgba.thumbnail(TARGET_PIXELS, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", TARGET_PIXELS, (0, 0, 0, 0))
+            canvas.alpha_composite(source_rgba, ((TARGET_PIXELS[0] - source_rgba.width) // 2, (TARGET_PIXELS[1] - source_rgba.height) // 2))
+            source_rgba = canvas
+        source_rgba.save(output_path, format="PNG", dpi=(TARGET_DPI, TARGET_DPI), optimize=True)
     with Image.open(output_path) as verified:
-        dpi = verified.info.get("dpi", (0, 0))
-        alpha_extrema = verified.getchannel("A").getextrema()
-        return {
-            "pixels": list(verified.size),
-            "mode": verified.mode,
-            "dpi": [round(float(dpi[0])), round(float(dpi[1]))],
-            "transparent_alpha": alpha_extrema[0] < 255,
-            "exact_approved_artwork_preserved": True,
-            "upscaled": source_width < TARGET_PIXELS[0] or source_height < TARGET_PIXELS[1],
-            "source_pixels": [source_width, source_height],
-        }
-
-
-def _build_printful_handoff(selection: dict[str, Any], recipient: dict[str, str], draft_id: str) -> dict[str, Any]:
-    return {
-        "external_id": f"blue-lotus-{draft_id}",
-        "recipient": recipient,
-        "item": {
-            "product_name": selection["garment"],
-            "color": selection["color"],
-            "size": selection["size"],
-            "quantity": selection["quantity"],
-            "front_placement": "front",
-            "back_placement": "back",
-        },
-        "pending_printful_fields": [
-            "catalog_variant_id",
-            "public front print-file URL",
-            "public back-logo URL",
-            "Printful API credential",
-        ],
-        "submit_to_printful": False,
-    }
-
-
-def _prune_prepared(prepared_orders: dict[str, dict[str, Any]]) -> None:
-    cutoff = time.time() - 60 * 60
-    for draft_id, prepared in list(prepared_orders.items()):
-        if prepared["created_at"] < cutoff:
-            Path(prepared["path"]).unlink(missing_ok=True)
-            prepared_orders.pop(draft_id, None)
+        dpi = tuple(round(value) for value in verified.info.get("dpi", (0, 0)))
+        digest = hashlib.sha256(output_path.read_bytes()).hexdigest()
+        return {"pixels": list(verified.size), "dpi": list(dpi), "transparent_alpha": verified.mode == "RGBA", "upscaled": False, "sha256": digest}
 
 
 app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=False)
+    app.run(debug=True)

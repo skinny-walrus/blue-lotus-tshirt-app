@@ -1,8 +1,19 @@
-# Blue Lotus T-Shirt Creator
+# Blue Lotus Kindness Collection
 
-An iPad-friendly Flask application for Blue Lotus Temple volunteers to select an approved dog-monk design, preview the front and back of the garment, choose color and size, approve the design, and prepare the verified artwork and order data needed for a future Printful API request.
+An iPad-friendly direct-to-consumer Flask storefront for Blue Lotus Temple's breed-specific Choose Loving Kindness shirts.
 
-The current version deliberately stops before Printful. It does not submit orders, store payment information, or create charges.
+## Customer experience
+
+- ten selectable dog breeds with approved transparent artwork;
+- Comfort Colors 1717 color, size, and quantity selection;
+- realistic front and back shirt previews;
+- full-screen detail viewer with buttons, touch panning, and pinch zoom;
+- persistent browser shopping cart and server-authoritative pricing;
+- Stripe-hosted checkout boundary with U.S. shipping-address collection, promotion codes, and optional automatic tax;
+- customer order-status, shipping, returns, privacy, and terms pages;
+- webhook-driven Printful fulfillment boundary and shipment tracking.
+
+The launch price is configured in `app.py` as $34.95, with a $3.00 2XL surcharge. The app never trusts a price sent by the browser.
 
 ## Run locally
 
@@ -16,21 +27,20 @@ flask --app app run
 
 Open `http://127.0.0.1:5000`.
 
-## Production boundary
+## Live commerce configuration
 
-The app currently provides:
+Store secrets in the hosting environment, never in Git:
 
-- approved breed, design, garment color, size, and quantity selection;
-- selectable Jagdterrier, Boston Terrier, Red Doberman, and Dachshund artwork;
-- Pepper, Navy, Moss, Ivory, and Bay garment choices, including a supplied Moss back-view mockup;
-- front/back garment preview;
-- design approval reset whenever production choices change;
-- U.S. shipping-field validation;
-- exact 2,700 × 3,450 transparent PNG output with 300 DPI metadata;
-- a structured preview of the future Printful order payload;
-- verified 3,300 × 4,200, 300 DPI transparent masters for Boston Terrier and Red Doberman;
-- clear disclosure that the new Jagdterrier and Dachshund previews still need higher-resolution transparent production masters before live fulfillment.
+- `FLASK_SECRET_KEY`
+- `ORDER_DATABASE`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_AUTOMATIC_TAX` (`true` or `false`)
+- `PRINTFUL_TOKEN`
+- `PRINTFUL_STORE_ID` when required
+- `PRINTFUL_WEBHOOK_TOKEN`
+- `PRINTFUL_VARIANT_IDS`, a JSON map such as `{"Pepper|M": 123456}`
 
-The next phase will add Printful authentication, catalog variant mapping, cost and shipping estimates, draft-order creation, explicit payment approval, and webhook status updates.
+Until both Stripe secrets are present, the storefront remains safe to demonstrate: checkout returns a clear setup message and takes no payment. Printful submission occurs only after Stripe sends a verified `checkout.session.completed` event. The customer pays Blue Lotus through Stripe; Printful separately charges Blue Lotus for production and shipping.
 
-The root `index.html` remains the public GitHub Pages mockup. Render runs the Flask application through `app.py` and `render.yaml`.
+Use a persistent location for `ORDER_DATABASE` on PythonAnywhere, for example `/home/skinnywalrus/blue-lotus-data/orders.sqlite3`.
