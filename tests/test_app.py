@@ -37,6 +37,10 @@ def test_home_and_health(tmp_path):
     assert b"Prepare Printful-ready package" in response.data
     assert b"Boston Terrier" in response.data
     assert b"Red Doberman" in response.data
+    assert b"Dachshund" in response.data
+    assert b"Navy" in response.data
+    assert b"Bay" in response.data
+    assert b"moss-shirt-back.png" in response.data
 
     health = client.get("/api/health").get_json()
     assert health == {
@@ -53,6 +57,7 @@ def test_draft_validation_and_unavailable_breed(tmp_path):
         "Jagdterrier": False,
         "Boston Terrier": True,
         "Red Doberman": True,
+        "Dachshund": False,
     }
     for breed, production_ready in expected_ready.items():
         response = client.post(
