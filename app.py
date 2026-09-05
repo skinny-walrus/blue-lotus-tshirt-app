@@ -34,18 +34,22 @@ COLORS = {
 }
 SIZES = ("S", "M", "L", "XL", "2XL")
 ARTWORKS = {
-    "Jagdterrier": "jagdterrier-loving-kindness.png",
+    "Beagle": "beagle-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
     "Dachshund": "dachshund-loving-kindness.png",
     "French Bulldog": "french-bulldog-loving-kindness.png",
-    "Labrador Retriever": "labrador-retriever-loving-kindness.png",
-    "Golden Retriever": "golden-retriever-loving-kindness.png",
-    "Beagle": "beagle-loving-kindness.png",
-    "Rottweiler": "rottweiler-loving-kindness.png",
-    "Pit Bull": "pit-bull-loving-kindness.png",
     "German Shepherd": "german-shepherd-loving-kindness.png",
+    "Golden Retriever": "golden-retriever-loving-kindness.png",
+    "Jagdterrier": "jagdterrier-loving-kindness.png",
+    "Labradoodle": "labradoodle-loving-kindness.png",
+    "Labrador Retriever": "labrador-retriever-loving-kindness.png",
+    "Norwich Terrier": "norwich-terrier-loving-kindness.png",
+    "Pit Bull": "pit-bull-loving-kindness.png",
+    "Rescue Dog": "rescue-dog-loving-kindness.png",
+    "Rottweiler": "rottweiler-loving-kindness.png",
 }
 BREEDS = tuple(ARTWORKS)
+INITIAL_BREED = "Rescue Dog"
 POLICIES = {
     "shipping": ("Shipping", "Each shirt is made to order. Most orders are produced in 2–5 business days, followed by carrier transit time. Tracking is emailed as soon as it is available."),
     "returns": ("Returns & exchanges", "Because each item is made to order, we replace items that arrive damaged, misprinted, or incorrect. Contact us within 30 days of delivery with your order number and a photo. Size exchanges for correctly fulfilled items are not currently offered."),
@@ -105,6 +109,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     def home():
         return render_template(
             "app.html", breeds=BREEDS, artworks=ARTWORKS, colors=COLORS, sizes=SIZES,
+            initial_breed=INITIAL_BREED,
             csrf_token=csrf_token(), base_price_cents=BASE_PRICE_CENTS,
             two_xl_surcharge_cents=TWO_XL_SURCHARGE_CENTS, checkout_configured=checkout_ready(),
         )
