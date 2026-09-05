@@ -25,6 +25,8 @@ def test_storefront_and_health(tmp_path):
     for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Bay", b"Navy"):
         assert text in page.data
     assert b"share love, compassion, and kindness throughout the world" in page.data
+    assert b"Wear the dog who taught you how" in page.data
+    assert b"all profits support its work teaching meditation and loving kindness" in page.data
     assert b"$29.95" in page.data
     assert b"moss-shirt-back.png" not in page.data
     assert b"useMoss" not in page.data
