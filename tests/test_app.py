@@ -24,7 +24,10 @@ def test_storefront_and_health(tmp_path):
     assert page.status_code == 200
     for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Bay", b"Navy"):
         assert text in page.data
-    assert b"kindness throughout the world" in page.data
+    assert b"share love, compassion, and kindness throughout the world" in page.data
+    assert b"$29.95" in page.data
+    assert b"moss-shirt-back.png" not in page.data
+    assert b"useMoss" not in page.data
     assert b"hue-rotate(198deg)" in page.data
     assert b"color==='Ivory'?'brightness(0) opacity(.78)'" in page.data
     assert b"Coming soon" not in page.data
@@ -54,7 +57,7 @@ def test_test_checkout_persists_cart_and_order_page(tmp_path):
     assert response.status_code == 200
     order = client.get(response.get_json()["checkout_url"])
     assert order.status_code == 200
-    assert b"Jagdterrier Tee" in order.data and b"Pit Bull Tee" in order.data and b"$110.85" in order.data
+    assert b"Jagdterrier Tee" in order.data and b"Pit Bull Tee" in order.data and b"$95.85" in order.data
 
 
 def test_checkout_validation_and_csrf(tmp_path):
