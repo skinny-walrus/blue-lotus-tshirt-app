@@ -33,7 +33,7 @@
       <fieldset style="border:0;padding:0;margin:0"><legend>Size</legend><div class="sizes">{% for size in sizes %}<button type="button" class="{{ 'on' if size=='M' else '' }}" data-size="{{ size }}">{{ size }}</button>{% endfor %}</div></fieldset>
       <div class="row"><label><span class="label">Quantity</span><input class="quantity" id="quantity" value="1" type="number" inputmode="numeric" min="1" max="10"></label><button class="add" id="addButton">Add to cart · $34.95</button></div>
       <div class="beneath"><span>🔒 Secure checkout</span><span>↻ Made to order</span><span>♡ Supports the temple</span></div>
-      <div class="cause"><strong>Wear the message. Support the mission.</strong>Your purchase helps Blue Lotus Temple share meditation, compassion, and community programming.</div>
+      <div class="cause"><strong>Wear the message. Support the mission.</strong>Your purchase helps Blue Lotus Temple share meditation, compassion, and kindness throughout the world.</div>
     </section>
   </main>
   <section class="story" id="story"><div class="story-inner"><h2>Choose loving kindness—one moment at a time.</h2><p>This collection pairs the joyful personality of beloved dog breeds with a simple practice: meet the world with a little more patience and care. Every design is prepared for high-quality direct-to-garment printing and made only when you order it.</p></div></section>
@@ -49,7 +49,7 @@ const $=s=>document.querySelector(s),money=c=>new Intl.NumberFormat('en-US',{sty
 const breed=$('#breed'),quantity=$('#quantity'),shirt=$('#shirt'),garment=$('#garment'),mossBack=$('#mossBack'),frontArt=$('#frontArt'),backArt=$('#backArt');
 let color='Pepper',size='M',side='front',cart=JSON.parse(localStorage.getItem('blueLotusCart')||'[]');
 function unitPrice(){return basePrice+(size==='2XL'?xlSurcharge:0)}
-function setSide(next){side=next;const isFront=side==='front',useMoss=!isFront&&color==='Moss';shirt.className='shirt '+side;garment.classList.toggle('hide',useMoss);mossBack.classList.toggle('hide',!useMoss);frontArt.classList.toggle('hide',!isFront);backArt.classList.toggle('hide',isFront);$('#frontButton').classList.toggle('on',isFront);$('#backButton').classList.toggle('on',!isFront)}
+function setSide(next){side=next;const isFront=side==='front',useMoss=!isFront&&color==='Moss';shirt.className='shirt '+side;garment.classList.toggle('hide',useMoss);mossBack.classList.toggle('hide',!useMoss);frontArt.classList.toggle('hide',!isFront);backArt.classList.toggle('hide',isFront);backArt.style.filter=color==='Ivory'?'brightness(0) opacity(.78)':'brightness(0) invert(1)';$('#frontButton').classList.toggle('on',isFront);$('#backButton').classList.toggle('on',!isFront)}
 function update(){const name=breed.value,details=colors[color];frontArt.src=staticBase+artworks[name];frontArt.alt=name+' Choose Loving Kindness artwork';garment.style.filter=details.filter;$('#previewTitle').textContent=name+' · '+color;$('#productName').textContent=name+' Loving Kindness Tee';$('#price').innerHTML=money(unitPrice())+' <small>USD</small>';$('#addButton').textContent='Add to cart · '+money(unitPrice()*Math.max(1,Number(quantity.value)||1));setSide(side)}
 breed.addEventListener('change',update);quantity.addEventListener('input',update);$('#frontButton').onclick=()=>setSide('front');$('#backButton').onclick=()=>setSide('back');
 document.querySelectorAll('.colors button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.colors button').forEach(x=>x.classList.remove('on'));b.classList.add('on');color=b.dataset.color;update()});
