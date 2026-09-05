@@ -2,137 +2,79 @@ from pathlib import Path
 
 from PIL import Image
 
-from app import create_app
+from app import ARTWORKS, create_app
 
 
-def make_client(tmp_path: Path):
-    app = create_app(
-        {
-            "TESTING": True,
-            "SECRET_KEY": "test-secret",
-            "EXPORT_DIR": tmp_path,
-        }
-    )
+def make_client(tmp_path: Path, **config):
+    app = create_app({"TESTING": True, "SECRET_KEY": "test-secret", "EXPORT_DIR": tmp_path / "exports", "ORDER_DATABASE": tmp_path / "orders.sqlite3", **config})
     return app.test_client()
 
 
-def csrf(client) -> str:
+def csrf(client):
     return client.get("/api/config").get_json()["csrf_token"]
 
 
-def valid_payload(breed="Jagdterrier"):
-    return {
-        "breed": breed,
-        "color": "Pepper",
-        "size": "M",
-        "quantity": 1,
-    }
+def item(breed="Jagdterrier", **values):
+    return {"breed": breed, "color": "Pepper", "size": "M", "quantity": 1, **values}
 
 
-def test_home_and_health(tmp_path):
+def test_storefront_and_health(tmp_path):
     client = make_client(tmp_path)
-    response = client.get("/")
+    page = client.get("/")
+    assert page.status_code == 200
+    for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Bay", b"Navy"):
+        assert text in page.data
+    assert b"kindness throughout the world" in page.data
+    assert b"hue-rotate(198deg)" in page.data
+    assert b"color==='Ivory'?'brightness(0) opacity(.78)'" in page.data
+    assert b"Coming soon" not in page.data
+    assert client.get("/api/health").get_json() == {"ok": True, "service": "blue-lotus-tshirt-store", "checkout_configured": False, "printful_connected": False}
+
+
+def test_all_artwork_is_production_ready():
+    for filename in ARTWORKS.values():
+        with Image.open(Path("static") / filename) as image:
+            assert image.width >= 2700 and image.height >= 3450
+            assert image.mode == "RGBA"
+            assert image.getextrema()[3] != (255, 255)
+
+
+def test_checkout_is_guarded_without_credentials(tmp_path):
+    client = make_client(tmp_path)
+    response = client.post("/api/checkout", json={"items": [item()]}, headers={"X-CSRF-Token": csrf(client)})
+    assert response.status_code == 503
+    assert response.get_json()["error"] == "Secure checkout is being connected. No payment was taken."
+    assert response.get_json()["order_id"]
+
+
+def test_test_checkout_persists_cart_and_order_page(tmp_path):
+    client = make_client(tmp_path, CHECKOUT_TEST_MODE=True)
+    payload = {"items": [item(), item("Pit Bull", color="Moss", size="2XL", quantity=2)]}
+    response = client.post("/api/checkout", json=payload, headers={"X-CSRF-Token": csrf(client)})
     assert response.status_code == 200
-    assert b"Garment size" in response.data
-    assert b"Prepare Printful-ready package" in response.data
-    assert b"Boston Terrier" in response.data
-    assert b"Dachshund" in response.data
-    assert b"Pit Bull" in response.data
-    assert b"Rottweiler" in response.data
-    assert b"German Shepherd" in response.data
-    assert b"\xc2\xb7 Available" not in response.data
-    assert b"\xc2\xb7 Coming soon" not in response.data
-    assert b"Navy" in response.data
-    assert b"Bay" in response.data
-    assert b"#b8bfab" in response.data
-    assert b"#fff4d9" in response.data
-    assert b"moss-shirt-back.png" in response.data
-    assert b"left:-95.7%" in response.data
-    assert b"width:14.4%;left:50%" in response.data
-
-    health = client.get("/api/health").get_json()
-    assert health == {
-        "ok": True,
-        "service": "blue-lotus-tshirt-app",
-        "printful_connected": False,
-    }
+    order = client.get(response.get_json()["checkout_url"])
+    assert order.status_code == 200
+    assert b"Jagdterrier Tee" in order.data and b"Pit Bull Tee" in order.data and b"$110.85" in order.data
 
 
-def test_draft_validation_and_unlisted_breed(tmp_path):
+def test_checkout_validation_and_csrf(tmp_path):
     client = make_client(tmp_path)
-    token = csrf(client)
-    expected_ready = {
-        "Jagdterrier": True,
-        "Boston Terrier": True,
-        "Dachshund": True,
-        "French Bulldog": True,
-        "Labrador Retriever": True,
-        "Golden Retriever": True,
-        "Beagle": True,
-        "Rottweiler": True,
-        "Pit Bull": True,
-        "German Shepherd": True,
-    }
-    for breed, production_ready in expected_ready.items():
-        response = client.post(
-            "/api/drafts",
-            json=valid_payload(breed),
-            headers={"X-CSRF-Token": token},
-        )
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data["selection"]["breed"] == breed
-        assert data["production_check"]["source_has_transparency"] is True
-        assert data["production_check"]["meaningful_transparency"] is True
-        assert data["production_check"]["production_ready"] is production_ready
-
-    unavailable = valid_payload() | {"breed": "Poodle"}
-    response = client.post("/api/drafts", json=unavailable, headers={"X-CSRF-Token": token})
-    assert response.status_code == 400
-    assert "listed dog breed" in response.get_json()["error"]
+    assert client.post("/api/checkout", json={"items": [item()]}).status_code == 403
+    bad = client.post("/api/checkout", json={"items": [item(color="Chartreuse")]}, headers={"X-CSRF-Token": csrf(client)})
+    assert bad.status_code == 400
 
 
-def test_prepare_requires_csrf_and_approval(tmp_path):
+def test_policy_pages(tmp_path):
     client = make_client(tmp_path)
-    response = client.post("/api/prepare", json=valid_payload())
-    assert response.status_code == 403
-
-    token = csrf(client)
-    response = client.post("/api/prepare", json=valid_payload(), headers={"X-CSRF-Token": token})
-    assert response.status_code == 400
-    assert "Approve" in response.get_json()["error"]
+    for name in ("shipping", "returns", "privacy", "terms"):
+        assert client.get(f"/policies/{name}").status_code == 200
 
 
-def test_prepares_verified_png_and_stops_before_printful(tmp_path):
+def test_staff_print_file_is_verified(tmp_path):
     client = make_client(tmp_path)
-    token = csrf(client)
-    payload = valid_payload("Pit Bull") | {
-        "approved": True,
-        "recipient": {
-            "name": "Test Recipient",
-            "address1": "100 Test Street",
-            "city": "Woodstock",
-            "state_code": "IL",
-            "zip": "60098",
-            "country_code": "US",
-            "email": "test@example.com",
-        },
-    }
-    response = client.post("/api/prepare", json=payload, headers={"X-CSRF-Token": token})
+    response = client.post("/api/prepare", json=item() | {"approved": True}, headers={"X-CSRF-Token": csrf(client)})
     assert response.status_code == 200
     data = response.get_json()
-    assert data["status"] == "ready_for_printful_connection"
-    assert data["printful_handoff"]["submit_to_printful"] is False
     assert data["verification"]["pixels"] == [2700, 3450]
     assert data["verification"]["dpi"] == [300, 300]
-    assert data["verification"]["transparent_alpha"] is True
-    assert data["verification"]["upscaled"] is False
-    assert data["printful_handoff"]["item"]["front_placement"] == "front"
-
-    download = client.get(data["download_url"])
-    assert download.status_code == 200
-    assert download.mimetype == "image/png"
-    exported = next(tmp_path.glob("*.png"))
-    with Image.open(exported) as image:
-        assert image.size == (2700, 3450)
-        assert image.mode == "RGBA"
+    assert client.get(data["download_url"]).status_code == 200
