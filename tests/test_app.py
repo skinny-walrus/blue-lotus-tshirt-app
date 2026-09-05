@@ -32,6 +32,8 @@ def test_storefront_and_health(tmp_path):
     assert b"useMoss" not in page.data
     assert b"hue-rotate(198deg)" in page.data
     assert b"brightness(2.25)" in page.data
+    assert b".shirt.front .garment{left:-7%;clip-path:inset(0 50% 0 0)}" in page.data
+    assert b".front-art{position:absolute;width:30%;left:50%" in page.data
     assert b"color==='Ivory'?'brightness(0) opacity(.78)'" in page.data
     assert b"Coming soon" not in page.data
     assert client.get("/api/health").get_json() == {"ok": True, "service": "blue-lotus-tshirt-store", "checkout_configured": False, "printful_connected": False}
