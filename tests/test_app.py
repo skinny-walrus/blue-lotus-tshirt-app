@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from app import ARTWORKS, create_app
+from app import ARTWORKS, BREEDS, INITIAL_BREED, create_app
 
 
 def make_client(tmp_path: Path, **config):
@@ -22,8 +22,15 @@ def test_storefront_and_health(tmp_path):
     client = make_client(tmp_path)
     page = client.get("/")
     assert page.status_code == 200
-    for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Bay", b"Navy"):
+    for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Labradoodle", b"Norwich Terrier", b"Rescue Dog", b"Bay", b"Navy"):
         assert text in page.data
+    assert BREEDS == tuple(sorted(BREEDS))
+    assert INITIAL_BREED == "Rescue Dog"
+    assert b'<option selected>Rescue Dog</option>' in page.data
+    assert b'Rescue Dog Loving Kindness Tee' in page.data
+    assert b'property="og:image" content="http://localhost/static/link-preview.png"' in page.data
+    assert b'property="og:image:width" content="1200"' in page.data
+    assert b'name="twitter:card" content="summary_large_image"' in page.data
     assert b"share love, compassion, and kindness throughout the world" in page.data
     assert b"Wear the dog who taught you how" in page.data
     assert b"all profits support its work teaching meditation and loving kindness" in page.data
