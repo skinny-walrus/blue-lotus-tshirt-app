@@ -26,27 +26,30 @@ BASE_PRICE_CENTS = 2995
 TWO_XL_SURCHARGE_CENTS = 300
 
 COLORS = {
-    "Pepper": {"hex": "#5c5a55", "filter": "grayscale(1) brightness(.82) contrast(.92)"},
-    "Navy": {"hex": "#25344b", "filter": "grayscale(.65) sepia(.45) hue-rotate(198deg) saturate(.9) brightness(.42) contrast(1.08)"},
-    "Moss": {"hex": "#73765f", "filter": "grayscale(.35) sepia(.72) hue-rotate(38deg) saturate(.72) brightness(.68)"},
-    "Ivory": {"hex": "#e6dcc7", "filter": "grayscale(.963) sepia(.740) saturate(.803) hue-rotate(350.5deg) brightness(2.25) contrast(.949)"},
-    "Bay": {"hex": "#b8bfab", "filter": "grayscale(.991) sepia(.169) saturate(1.905) hue-rotate(52.7deg) brightness(2.676) contrast(.682)"},
+    "Pepper": {"hex": "#5c5a55", "image": "garment-pepper.png"},
+    "Navy": {"hex": "#25344b", "image": "garment-navy.png"},
+    "Moss": {"hex": "#73765f", "image": "garment-moss.png"},
+    "Ivory": {"hex": "#e6dcc7", "image": "garment-ivory.png"},
+    "Bay": {"hex": "#b8bfab", "image": "garment-bay.png"},
 }
 SIZES = ("S", "M", "L", "XL", "2XL")
 ARTWORKS = {
     "Beagle": "beagle-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
     "Dachshund": "dachshund-loving-kindness.png",
+    "Fat Cat Rescue": "fat-cat-rescue-loving-kindness.png",
     "French Bulldog": "french-bulldog-loving-kindness.png",
     "German Shepherd": "german-shepherd-loving-kindness.png",
     "Golden Retriever": "golden-retriever-loving-kindness.png",
     "Jagdterrier": "jagdterrier-loving-kindness.png",
     "Labradoodle": "labradoodle-loving-kindness.png",
     "Labrador Retriever": "labrador-retriever-loving-kindness.png",
+    "Lhasa Apso": "lhasa-apso-loving-kindness.png",
     "Norwich Terrier": "norwich-terrier-loving-kindness.png",
     "Pit Bull": "pit-bull-loving-kindness.png",
     "Rescue Dog": "rescue-dog-loving-kindness.png",
     "Rottweiler": "rottweiler-loving-kindness.png",
+    "Sinhala Hound": "sinhala-hound-loving-kindness.png",
 }
 BREEDS = tuple(ARTWORKS)
 INITIAL_BREED = "Rescue Dog"

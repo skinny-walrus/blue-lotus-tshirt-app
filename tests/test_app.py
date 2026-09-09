@@ -31,17 +31,17 @@ def test_storefront_and_health(tmp_path):
     assert b'property="og:image" content="http://localhost/static/link-preview.png"' in page.data
     assert b'property="og:image:width" content="1200"' in page.data
     assert b'name="twitter:card" content="summary_large_image"' in page.data
-    assert b"share love, compassion, and kindness throughout the world" in page.data
-    assert b"Wear the dog who taught you how" in page.data
-    assert b"all profits support its work teaching meditation and loving kindness" in page.data
+    assert b"Love In Action" in page.data
+    assert b"Wear the companion who taught you how" in page.data
+    assert b"All profits from this collection support" in page.data
     assert b"$29.95" in page.data
     assert b"moss-shirt-back.png" not in page.data
     assert b"useMoss" not in page.data
-    assert b"hue-rotate(198deg)" in page.data
-    assert b"brightness(2.25)" in page.data
+    assert b"hue-rotate(198deg)" not in page.data
+    assert b"garment-pepper.png" in page.data
     assert b".shirt.front .garment{left:-7%;clip-path:inset(0 50% 0 0)}" in page.data
     assert b".front-art{position:absolute;width:30%;left:50%" in page.data
-    assert b"color==='Ivory'?'brightness(0) opacity(.78)'" in page.data
+    assert b"['Pepper','Navy'].includes(color)?'brightness(0) invert(1)':'none'" in page.data
     assert b"Coming soon" not in page.data
     assert client.get("/api/health").get_json() == {"ok": True, "service": "blue-lotus-tshirt-store", "checkout_configured": False, "printful_connected": False}
 
@@ -50,6 +50,7 @@ def test_all_artwork_is_production_ready():
     for filename in ARTWORKS.values():
         with Image.open(Path("static") / filename) as image:
             assert image.width >= 2700 and image.height >= 3450
+            assert all(round(dpi) >= 300 for dpi in image.info.get("dpi", (0, 0)))
             assert image.mode == "RGBA"
             assert image.getextrema()[3] != (255, 255)
 
