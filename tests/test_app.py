@@ -15,14 +15,14 @@ def csrf(client):
 
 
 def item(breed="Jagdterrier", **values):
-    return {"breed": breed, "color": "Pepper", "size": "M", "quantity": 1, **values}
+    return {"breed": breed, "color": "Gray", "size": "M", "quantity": 1, **values}
 
 
 def test_storefront_and_health(tmp_path):
     client = make_client(tmp_path)
     page = client.get("/")
     assert page.status_code == 200
-    for text in (b"Add to cart", b"Secure checkout", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Labradoodle", b"Norwich Terrier", b"Rescue Dog", b"Bay", b"Navy"):
+    for text in (b"Add to cart", b"Review order request", b"Pinch-to-zoom", b"Pit Bull", b"German Shepherd", b"Labradoodle", b"Norwich Terrier", b"Rescue Dog", b"Bay", b"Ice Blue"):
         assert text in page.data
     assert BREEDS == tuple(sorted(BREEDS))
     assert INITIAL_BREED == "Rescue Dog"
@@ -38,10 +38,10 @@ def test_storefront_and_health(tmp_path):
     assert b"moss-shirt-back.png" not in page.data
     assert b"useMoss" not in page.data
     assert b"hue-rotate(198deg)" not in page.data
-    assert b"garment-pepper.png" in page.data
+    assert b"garment-gray-front.jpg" in page.data
     assert b".shirt.front .garment{left:-7%;clip-path:inset(0 50% 0 0)}" in page.data
     assert b".front-art{position:absolute;width:30%;left:50%" in page.data
-    assert b"['Pepper','Navy'].includes(color)?'brightness(0) invert(1)':'none'" in page.data
+    assert b"backArt.style.filter='none'" in page.data
     assert b"Coming soon" not in page.data
     assert client.get("/api/health").get_json() == {"ok": True, "service": "blue-lotus-tshirt-store", "checkout_configured": False, "printful_connected": False}
 
@@ -53,31 +53,6 @@ def test_all_artwork_is_production_ready():
             assert all(round(dpi) >= 300 for dpi in image.info.get("dpi", (0, 0)))
             assert image.mode == "RGBA"
             assert image.getextrema()[3] != (255, 255)
-
-
-def test_checkout_is_guarded_without_credentials(tmp_path):
-    client = make_client(tmp_path)
-    response = client.post("/api/checkout", json={"items": [item()]}, headers={"X-CSRF-Token": csrf(client)})
-    assert response.status_code == 503
-    assert response.get_json()["error"] == "Secure checkout is being connected. No payment was taken."
-    assert response.get_json()["order_id"]
-
-
-def test_test_checkout_persists_cart_and_order_page(tmp_path):
-    client = make_client(tmp_path, CHECKOUT_TEST_MODE=True)
-    payload = {"items": [item(), item("Pit Bull", color="Moss", size="2XL", quantity=2)]}
-    response = client.post("/api/checkout", json=payload, headers={"X-CSRF-Token": csrf(client)})
-    assert response.status_code == 200
-    order = client.get(response.get_json()["checkout_url"])
-    assert order.status_code == 200
-    assert b"Jagdterrier Tee" in order.data and b"Pit Bull Tee" in order.data and b"$95.85" in order.data
-
-
-def test_checkout_validation_and_csrf(tmp_path):
-    client = make_client(tmp_path)
-    assert client.post("/api/checkout", json={"items": [item()]}).status_code == 403
-    bad = client.post("/api/checkout", json={"items": [item(color="Chartreuse")]}, headers={"X-CSRF-Token": csrf(client)})
-    assert bad.status_code == 400
 
 
 def test_policy_pages(tmp_path):
@@ -94,3 +69,8 @@ def test_staff_print_file_is_verified(tmp_path):
     assert data["verification"]["pixels"] == [2700, 3450]
     assert data["verification"]["dpi"] == [300, 300]
     assert client.get(data["download_url"]).status_code == 200
+
+
+def test_navy_is_no_longer_offered(tmp_path):
+    client = make_client(tmp_path)
+    assert "Navy" not in [color["name"] for color in client.get("/api/config").get_json()["colors"]]

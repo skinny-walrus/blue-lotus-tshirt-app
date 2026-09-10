@@ -15,6 +15,7 @@ from typing import Any
 
 from flask import Flask, abort, jsonify, render_template, request, send_file, session, url_for
 from PIL import Image
+from order_requests import register_order_requests, mail_ready
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -26,8 +27,9 @@ BASE_PRICE_CENTS = 2995
 TWO_XL_SURCHARGE_CENTS = 300
 
 COLORS = {
-    "Pepper": {"hex": "#5c5a55", "image": "garment-pepper.png"},
-    "Navy": {"hex": "#25344b", "image": "garment-navy.png"},
+    "Gray": {"hex": "#858580", "image": "garment-gray-front.jpg", "back_image": "garment-gray-back.jpg"},
+    "Mystic Blue": {"hex": "#6486bd", "image": "garment-mystic-blue-front.jpg", "back_image": "garment-mystic-blue-back.jpg"},
+    "Ice Blue": {"hex": "#7c9da6", "image": "garment-gray-front.jpg", "back_image": "garment-gray-back.jpg"},
     "Moss": {"hex": "#73765f", "image": "garment-moss.png"},
     "Ivory": {"hex": "#e6dcc7", "image": "garment-ivory.png"},
     "Bay": {"hex": "#b8bfab", "image": "garment-bay.png"},
@@ -54,10 +56,10 @@ ARTWORKS = {
 BREEDS = tuple(ARTWORKS)
 INITIAL_BREED = "Rescue Dog"
 POLICIES = {
-    "shipping": ("Shipping", "Each shirt is made to order. Most orders are produced in 2–5 business days, followed by carrier transit time. Tracking is emailed as soon as it is available."),
+    "shipping": ("Shipping", "Each shirt is made to order. Shipping cost and delivery timing will be confirmed with you before your order is accepted."),
     "returns": ("Returns & exchanges", "Because each item is made to order, we replace items that arrive damaged, misprinted, or incorrect. Contact us within 30 days of delivery with your order number and a photo. Size exchanges for correctly fulfilled items are not currently offered."),
-    "privacy": ("Privacy", "We use customer contact and shipping details only to process, fulfill, and support orders. Payment details are entered directly on Stripe's secure checkout and are not stored by this website."),
-    "terms": ("Terms", "Product previews are representative. Garment-dyed shirts naturally vary slightly in color. By ordering, you authorize the stated product, shipping, and tax charges shown at checkout."),
+    "privacy": ("Privacy", "We use customer contact and shipping details only to process, fulfill, and support orders. Order requests and customer details are stored by the shop and emailed to its order manager for follow-up. We do not collect card or bank details on this website."),
+    "terms": ("Terms", "Product previews are representative. Garment-dyed shirts naturally vary slightly in color. Submitting a request does not charge you or confirm an order. Availability, shipping, tax, and payment arrangements will be confirmed with you before the order is accepted."),
 }
 
 
@@ -76,6 +78,16 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         PRINTFUL_VARIANT_IDS=os.environ.get("PRINTFUL_VARIANT_IDS", "{}"),
         PRINTFUL_WEBHOOK_TOKEN=os.environ.get("PRINTFUL_WEBHOOK_TOKEN", ""),
         CHECKOUT_TEST_MODE=False,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true",
+        SMTP_HOST=os.environ.get("SMTP_HOST", "smtp.gmail.com"),
+        SMTP_PORT=int(os.environ.get("SMTP_PORT", "587")),
+        SMTP_USE_SSL=os.environ.get("SMTP_USE_SSL", "false").lower() == "true",
+        SMTP_USERNAME=os.environ.get("SMTP_USERNAME", "sid.overbey@melerai.com"),
+        SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
+        ORDER_EMAIL_FROM=os.environ.get("ORDER_EMAIL_FROM", "sid.overbey@melerai.com"),
+        ORDER_EMAIL_TO=os.environ.get("ORDER_EMAIL_TO", "sid.overbey@melerai.com"),
     )
     if test_config:
         app.config.update(test_config)
@@ -90,7 +102,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         return session["csrf_token"]
 
     def checkout_ready() -> bool:
-        return bool(app.config["STRIPE_SECRET_KEY"] and app.config["STRIPE_WEBHOOK_SECRET"])
+        return mail_ready(app)
 
     @app.before_request
     def protect_api() -> None:
@@ -136,65 +148,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             "checkout_configured": checkout_ready(), "csrf_token": csrf_token(),
         })
 
-    @app.post("/api/checkout")
-    def create_checkout():
-        payload = _json_payload()
-        raw_items = payload.get("items")
-        if not isinstance(raw_items, list) or not raw_items or len(raw_items) > 20:
-            abort(400, description="Your cart must contain between 1 and 20 items.")
-        items = [_price_item(_validate_selection(item)) for item in raw_items]
-        order_id = uuid.uuid4().hex
-        total_cents = sum(item["line_total_cents"] for item in items)
-        _save_order(app.config["ORDER_DATABASE"], order_id, "pending", items, total_cents)
-
-        if app.config["CHECKOUT_TEST_MODE"]:
-            _update_order(app.config["ORDER_DATABASE"], order_id, "test_ready")
-            return jsonify({"ok": True, "order_id": order_id, "checkout_url": url_for("order_status", order_id=order_id)})
-
-        if not checkout_ready():
-            _update_order(app.config["ORDER_DATABASE"], order_id, "checkout_unavailable")
-            return jsonify({
-                "ok": False, "order_id": order_id,
-                "error": "Secure checkout is being connected. No payment was taken.",
-            }), 503
-
-        try:
-            import stripe
-
-            stripe.api_key = app.config["STRIPE_SECRET_KEY"]
-            checkout = stripe.checkout.Session.create(
-                mode="payment",
-                customer_creation="always",
-                billing_address_collection="auto",
-                shipping_address_collection={"allowed_countries": ["US"]},
-                automatic_tax={"enabled": app.config["STRIPE_AUTOMATIC_TAX"]},
-                allow_promotion_codes=True,
-                success_url=url_for("order_status", order_id=order_id, _external=True) + "?paid=1",
-                cancel_url=url_for("home", _external=True) + "?checkout=cancelled",
-                metadata={"order_id": order_id},
-                line_items=[{
-                    "quantity": item["quantity"],
-                    "price_data": {
-                        "currency": "usd", "unit_amount": item["unit_price_cents"],
-                        "product_data": {
-                            "name": f"{item['breed']} Choose Loving Kindness T-Shirt",
-                            "description": f"Comfort Colors 1717 · {item['color']} · {item['size']}",
-                            "images": [url_for("static", filename=ARTWORKS[item["breed"]], _external=True)],
-                        },
-                    },
-                } for item in items],
-            )
-        except Exception:
-            app.logger.exception("Stripe checkout session creation failed")
-            _update_order(app.config["ORDER_DATABASE"], order_id, "checkout_error")
-            return jsonify({"ok": False, "error": "Secure checkout is temporarily unavailable. No payment was taken."}), 502
-
-        _update_order(app.config["ORDER_DATABASE"], order_id, "awaiting_payment", stripe_session_id=checkout.id)
-        return jsonify({"ok": True, "order_id": order_id, "checkout_url": checkout.url})
+    register_order_requests(app, csrf_token, _validate_selection, _price_item, _save_order, _update_order, _get_order, BASE_PRICE_CENTS, TWO_XL_SURCHARGE_CENTS)
 
     @app.post("/webhooks/stripe")
     def stripe_webhook():
-        if not checkout_ready():
+        if not (app.config["STRIPE_SECRET_KEY"] and app.config["STRIPE_WEBHOOK_SECRET"]):
             abort(404)
         try:
             import stripe
@@ -238,6 +196,8 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     def order_status(order_id: str):
         order = _get_order(app.config["ORDER_DATABASE"], order_id)
         if not order:
+            abort(404)
+        if order["status"] in ("request_sent", "sending_request", "email_attention") and order_id not in session.get("request_receipts", []):
             abort(404)
         return render_template("order.html", order=order)
 
@@ -363,6 +323,8 @@ def _submit_printful_order(app: Flask, order_id: str, checkout: dict[str, Any], 
     items = []
     for item in order["items"]:
         variant_id = variants.get(f"{item['color']}|{item['size']}")
+        if not variant_id and item["color"] == "Gray":
+            variant_id = variants.get(f"Grey|{item['size']}")
         if not variant_id:
             raise ValueError(f"Missing Printful variant for {item['color']} {item['size']}")
         items.append({
