@@ -54,15 +54,18 @@
 .quantity-stepper button:hover{background:#e6edf3}
 @media(max-width:950px){.top .section-nav{width:100%;justify-content:flex-end}.top .collections{margin-left:auto;margin-right:0}.top{row-gap:8px}}
 @media(max-width:580px){.top{gap:8px 16px}.top .brand{margin:auto}.top .collections{width:100%;margin:0;justify-content:center;gap:18px}.top .collections a{font-size:15px}.top .section-nav{justify-content:center;padding-top:5px}}
+/* Use the same garment silhouette and layer treatment as Virtues. */
+.shirt{filter:none}
 </style>
 </head>
 <body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute;pointer-events:none"><defs><filter id="garmentTint" color-interpolation-filters="sRGB"><feColorMatrix id="garmentTintMatrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <header class="top"><a class="brand" href="/"><img src="{{ url_for('static',filename='blue-lotus-logo.png') }}" alt="Blue Lotus Temple"></a><nav class="collections" aria-label="Collections"><a href="/virtues/">The Virtues Collection</a><a href="/" aria-current="page">The Kindness Collection</a></nav><nav class="section-nav" aria-label="On this page"><a href="#story">Love In Action</a></nav></header><button class="cart-button collection-cart" id="cartOpen">Cart <b id="cartCount">0</b></button>
   <div class="notice">Made to order in the USA · Proceeds support Bhante Sujatha’s Love In Action humanitarian work</div>
   <section class="hero"><p class="eyebrow">The Choose Loving Kindness Collection</p><h1>Choose loving kindness. Wear the companion who taught you how.</h1><p>They never needed to be taught patience, forgiveness, or how to greet someone at the door. Original animal artwork on a soft, garment-dyed Comfort Colors® tee. Created through Blue Lotus Temple in Woodstock, Illinois, with proceeds supporting Bhante Sujatha’s humanitarian mission.</p></section>
   <main class="product">
     <section class="card visual"><div class="visual-head"><strong id="previewTitle">{{ initial_breed }} · Gray</strong><div class="toggle"><button class="on" id="frontButton">Front</button><button id="backButton">Back</button></div></div>
-      <div class="stage"><div class="shirt front" id="shirt"><img class="garment" id="garment" src="{{ url_for('static',filename='garment-gray-front.jpg') }}" alt="T-shirt"><img class="front-art" id="frontArt" src="{{ url_for('static',filename=artworks[initial_breed]) }}" alt="{{ initial_breed }} Choose Loving Kindness artwork"><img class="back-art hide" id="backArt" src="{{ url_for('static',filename='blue-lotus-logo.png') }}" alt="Blue Lotus Temple back logo"></div><button class="zoom-open" id="zoomOpen" aria-label="Magnify shirt preview">🔍</button></div>
+      <div class="stage"><div class="shirt front" id="shirt"><img class="garment" id="garment" src="{{ url_for('static',filename='garment-ivory.png') }}" alt="T-shirt"><img class="front-art" id="frontArt" src="{{ url_for('static',filename=artworks[initial_breed]) }}" alt="{{ initial_breed }} Choose Loving Kindness artwork"><img class="back-art hide" id="backArt" src="{{ url_for('static',filename='blue-lotus-logo.png') }}" alt="Blue Lotus Temple back logo"></div><button class="zoom-open" id="zoomOpen" aria-label="Magnify shirt preview">🔍</button></div>
       <div class="caption"><span>Front artwork · Back logo below collar</span><span>Pinch-to-zoom available</span></div>
     </section>
     <section class="card buy"><p class="eyebrow">Blue Lotus Temple exclusive</p><h2 id="productName">{{ initial_breed }} Loving Kindness Tee</h2><div class="price" id="price">$29.95 <small>USD</small></div><p class="description">A substantial, lived-in garment-dyed tee featuring original animal artwork and the invitation to Choose Loving Kindness.</p>
@@ -87,7 +90,12 @@ const basePrice={{ base_price_cents }},xlSurcharge={{ two_xl_surcharge_cents }},
 const $=s=>document.querySelector(s),money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
 const breed=$('#breed'),quantity=$('#quantity'),shirt=$('#shirt'),garment=$('#garment'),frontArt=$('#frontArt'),backArt=$('#backArt');
 let color='Gray',size='M',side='front',cart=JSON.parse(localStorage.getItem('blueLotusCart')||'[]');
-function applyGarment(target,view){const details=colors[color],single=Boolean(details.back_image);target.classList.toggle('single-garment',single);target.classList.toggle('ice-blue',color==='Ice Blue');target.querySelector('.garment').src=staticBase+(view==='back'&&single?details.back_image:details.image)}
+function applyGarment(target,view){
+ const channels=colors[color].hex.slice(1).match(/../g).map(h=>parseInt(h,16)/220);
+ $('#garmentTintMatrix').setAttribute('values',channels.flatMap(v=>[.2126*v,.7152*v,.0722*v,0,0]).concat([0,0,0,1,0]).join(' '));
+ const image=target.querySelector('.garment');image.src=staticBase+'garment-ivory.png';image.style.filter=color==='Ivory'?'none':'url(#garmentTint)';
+}
+
 function unitPrice(){return basePrice+(size==='2XL'?xlSurcharge:0)}
 function setSide(next){side=next;const isFront=side==='front';shirt.className='shirt '+side;garment.classList.remove('hide');frontArt.classList.toggle('hide',!isFront);backArt.classList.toggle('hide',isFront);backArt.style.filter='none';applyGarment(shirt,side);$('#frontButton').classList.toggle('on',isFront);$('#backButton').classList.toggle('on',!isFront)}
 function update(){const name=breed.value,details=colors[color];frontArt.src=staticBase+'previews/'+artworks[name].replace(/\.png$/,'.webp');frontArt.alt=name+' Choose Loving Kindness artwork';garment.src=staticBase+details.image;garment.style.filter='none';$('#previewTitle').textContent=name+' · '+color;$('#productName').textContent=name+' Loving Kindness Tee';$('#price').innerHTML=money(unitPrice())+' <small>USD</small>';$('#addButton').textContent='Add to cart · '+money(unitPrice()*Math.max(1,Number(quantity.value)||1));setSide(side)}

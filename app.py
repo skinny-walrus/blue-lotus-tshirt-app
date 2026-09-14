@@ -27,7 +27,7 @@ BASE_PRICE_CENTS = 2995
 TWO_XL_SURCHARGE_CENTS = 300
 
 COLORS = {
-    "Gray": {"hex": "#858580", "image": "garment-gray-front.jpg", "back_image": "garment-gray-back.jpg"},
+    "Gray": {"hex": "#92928f", "image": "garment-gray-front.jpg", "back_image": "garment-gray-back.jpg"},
     "Mystic Blue": {"hex": "#6486bd", "image": "garment-mystic-blue-front.jpg", "back_image": "garment-mystic-blue-back.jpg"},
     "Ice Blue": {"hex": "#7c9da6", "image": "garment-gray-front.jpg", "back_image": "garment-gray-back.jpg"},
     "Moss": {"hex": "#73765f", "image": "garment-moss.png"},
