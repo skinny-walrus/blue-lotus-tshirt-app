@@ -27,7 +27,7 @@ function update(){
  $('garmentTintMatrix').setAttribute('values',channels.flatMap(v=>[.2126*v,.7152*v,.0722*v,0,0]).concat([0,0,0,1,0]).join(' '));
  $('garment').style.filter=state.color==='Ivory'?'none':'url(#garmentTint)';
  const product=products[state.virtue];
- if(product){artwork.src='/static/'+product.file;artwork.alt=product.name+' artwork and blessing'}
+ if(product){artwork.src='/static/previews/'+product.file.replace(/\.png$/,'.webp');artwork.alt=product.name+' artwork and blessing'}
  $('chestLogo').hidden=!front;$('printArea').hidden=front||Boolean(product);artwork.hidden=front||!product;$('placement').textContent=front?'Front · Blue logo on wearer’s left chest':product?'Back · '+v.pali+' artwork':'Back · Planned virtue artwork placement';
  $('frontButton').setAttribute('aria-pressed',String(front));$('backButton').setAttribute('aria-pressed',String(!front));
  $('price').textContent=state.size==='2XL'?'$32.95':'$29.95';
