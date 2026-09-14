@@ -30,10 +30,29 @@
     @media(max-width:900px){.product{grid-template-columns:1fr}.buy{position:static}.stage{min-height:600px}.story-inner{grid-template-columns:1fr;gap:20px}.nav a{display:none}}
     @media(max-width:600px){.top{height:70px;padding:0 13px}.brand img{width:104px;height:50px}.brand span{display:none}.notice{font-size:9px}.hero{padding:28px 16px 13px}.product{padding:8px 11px 45px;gap:12px}.visual{padding:11px}.stage{min-height:440px}.shirt{width:100%}.buy{padding:23px}.cause{margin:20px -23px -23px}.caption{font-size:9px}.zoom-open{right:12px;bottom:12px}.story-inner{padding:45px 20px}}
   .mission-link{display:inline-block;margin-top:12px;color:#fff;font-weight:800;text-decoration:none;border-bottom:1px solid #ffffff88;padding-bottom:3px}.impact{padding:46px clamp(24px,8vw,120px) 54px;background:#f4f5f3}.impact>h2{font:700 clamp(28px,3vw,42px) Georgia,serif;margin:7px 0 24px}.impact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.impact-grid article{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}.impact-grid strong{display:block;font:700 18px Georgia,serif;margin-bottom:7px}.impact-grid span{font-size:13px;line-height:1.5;color:var(--muted)}@media(max-width:800px){.impact-grid{grid-template-columns:1fr 1fr}}.shirt.single-garment .garment{left:0;top:0;width:100%;height:100%;object-fit:contain;clip-path:none}.shirt.single-garment{background:#eee9df;filter:none}.shirt.single-garment .garment{mix-blend-mode:multiply}.shirt.ice-blue .garment{filter:sepia(1) saturate(.65) hue-rotate(145deg) brightness(1.1)!important}.colors{flex-wrap:wrap}
+
+/* Collection header and persistent quantity controls match the Virtues preview. */
+.top{height:auto;max-width:1250px;margin:auto;padding:15px 35px;position:static;background:transparent;backdrop-filter:none;gap:24px;flex-wrap:wrap}
+.top .brand img{width:108px;height:58px}
+.top nav{display:flex;align-items:center;font-size:13px}
+.top nav a{text-decoration:none;color:#253946}
+.top .collections{margin-right:auto;gap:24px}
+.top .collections a{font:600 17px Georgia,serif;padding:9px 0;white-space:nowrap}
+.top .collections a[aria-current=page]{color:#0d4d91;border-bottom:2px solid #0d4d91}
+.top .section-nav{gap:20px}
+.collection-cart{display:block;margin:12px max(25px,calc((100vw - 1130px)/2)) 0 auto}
+.quantity-stepper{display:flex;width:100px;height:49px;border:1px solid #cbd5dc;border-radius:11px;background:#fafcfd;overflow:hidden}
+.quantity-stepper .quantity{appearance:textfield;width:36px;height:47px;padding:0;border:0;border-radius:0;text-align:center;flex:1;min-width:0}
+.quantity::-webkit-inner-spin-button,.quantity::-webkit-outer-spin-button{appearance:none;margin:0}
+.quantity-stepper button{flex:0 0 30px;padding:0;border:0;background:transparent;color:#17365d;font-size:20px;cursor:pointer}
+.quantity-stepper button:focus-visible{outline:2px solid #0d4d91;outline-offset:-3px}
+.quantity-stepper button:hover{background:#e6edf3}
+@media(max-width:950px){.top .section-nav{width:100%;justify-content:flex-end}.top .collections{margin-left:auto;margin-right:0}.top{row-gap:8px}}
+@media(max-width:580px){.top{gap:8px 16px}.top .brand{margin:auto}.top .collections{width:100%;margin:0;justify-content:center;gap:18px}.top .collections a{font-size:15px}.top .section-nav{justify-content:center;padding-top:5px}}
 </style>
 </head>
 <body>
-  <header class="top"><a class="brand" href="/"><img src="{{ url_for('static',filename='blue-lotus-logo.png') }}" alt="Blue Lotus Temple"><span>Kindness Collection</span></a><nav class="nav"><a href="#story">Our purpose</a><button class="cart-button" id="cartOpen">Cart <b id="cartCount">0</b></button></nav></header>
+  <header class="top"><a class="brand" href="/"><img src="{{ url_for('static',filename='blue-lotus-logo.png') }}" alt="Blue Lotus Temple"></a><nav class="collections" aria-label="Collections"><a href="/virtues/">The Virtues Collection</a><a href="/" aria-current="page">The Kindness Collection</a></nav><nav class="section-nav" aria-label="On this page"><a href="#story">Love In Action</a></nav></header><button class="cart-button collection-cart" id="cartOpen">Cart <b id="cartCount">0</b></button>
   <div class="notice">Made to order in the USA · Proceeds support Bhante Sujatha’s Love In Action humanitarian work</div>
   <section class="hero"><p class="eyebrow">The Choose Loving Kindness Collection</p><h1>Choose loving kindness. Wear the companion who taught you how.</h1><p>They never needed to be taught patience, forgiveness, or how to greet someone at the door. Original animal artwork on a soft, garment-dyed Comfort Colors® tee. Created through Blue Lotus Temple in Woodstock, Illinois, with proceeds supporting Bhante Sujatha’s humanitarian mission.</p></section>
   <main class="product">
@@ -45,7 +64,7 @@
       <label class="label" for="breed">Choose your artwork</label><div class="select"><select id="breed">{% for breed in breeds %}<option{{ ' selected' if breed == initial_breed else '' }}>{{ breed }}</option>{% endfor %}</select></div>
       <fieldset style="border:0;padding:0;margin:0"><legend>Color</legend><div class="colors">{% for name,details in colors.items() %}<button type="button" class="{{ 'on' if loop.first else '' }}" data-color="{{ name }}" data-hex="{{ details.hex }}" data-image="{{ details.image }}"><i style="background:{{ details.hex }}"></i><small>{{ name }}</small></button>{% endfor %}</div></fieldset>
       <fieldset style="border:0;padding:0;margin:0"><legend>Size</legend><div class="sizes">{% for size in sizes %}<button type="button" class="{{ 'on' if size=='M' else '' }}" data-size="{{ size }}">{{ size }}</button>{% endfor %}</div></fieldset>
-      <div class="row"><label><span class="label">Quantity</span><input class="quantity" id="quantity" value="1" type="number" inputmode="numeric" min="1" max="10"></label><button class="add" id="addButton">Add to cart · $29.95</button></div>
+      <div class="row"><div><label class="label" for="quantity">Quantity</label><div class="quantity-stepper"><button id="quantityDown" type="button" aria-label="Decrease quantity">−</button><input class="quantity" id="quantity" value="1" type="number" inputmode="numeric" min="1" max="10" step="1" required><button id="quantityUp" type="button" aria-label="Increase quantity">+</button></div></div><button class="add" id="addButton">Add to cart · $29.95</button></div>
       <div class="beneath"><span>No payment collected</span><span>↻ Made to order</span><span>♡ Supports the temple</span></div>
       <div class="cause"><strong>Wear the message. Support Love In Action.</strong>All profits from this collection support Bhante Sujatha’s humanitarian work—putting loving kindness into action for families and communities in need.</div>
     </section>
@@ -67,7 +86,7 @@ function applyGarment(target,view){const details=colors[color],single=Boolean(de
 function unitPrice(){return basePrice+(size==='2XL'?xlSurcharge:0)}
 function setSide(next){side=next;const isFront=side==='front';shirt.className='shirt '+side;garment.classList.remove('hide');frontArt.classList.toggle('hide',!isFront);backArt.classList.toggle('hide',isFront);backArt.style.filter='none';applyGarment(shirt,side);$('#frontButton').classList.toggle('on',isFront);$('#backButton').classList.toggle('on',!isFront)}
 function update(){const name=breed.value,details=colors[color];frontArt.src=staticBase+artworks[name];frontArt.alt=name+' Choose Loving Kindness artwork';garment.src=staticBase+details.image;garment.style.filter='none';$('#previewTitle').textContent=name+' · '+color;$('#productName').textContent=name+' Loving Kindness Tee';$('#price').innerHTML=money(unitPrice())+' <small>USD</small>';$('#addButton').textContent='Add to cart · '+money(unitPrice()*Math.max(1,Number(quantity.value)||1));setSide(side)}
-breed.addEventListener('change',update);quantity.addEventListener('input',update);$('#frontButton').onclick=()=>setSide('front');$('#backButton').onclick=()=>setSide('back');
+breed.addEventListener('change',update);quantity.addEventListener('input',update);for(const [id,step] of [['#quantityDown',-1],['#quantityUp',1]])$(id).onclick=()=>{const current=Number(quantity.value);quantity.value=Math.max(1,Math.min(10,(Number.isFinite(current)?current:1)+step));update()};$('#frontButton').onclick=()=>setSide('front');$('#backButton').onclick=()=>setSide('back');
 document.querySelectorAll('.colors button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.colors button').forEach(x=>x.classList.remove('on'));b.classList.add('on');color=b.dataset.color;update()});
 document.querySelectorAll('.sizes button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.sizes button').forEach(x=>x.classList.remove('on'));b.classList.add('on');size=b.dataset.size;update()});
 function saveCart(){localStorage.setItem('blueLotusCart',JSON.stringify(cart));renderCart()}
@@ -76,7 +95,7 @@ function renderCart(){const wrap=$('#cartItems');$('#cartCount').textContent=car
 function openCart(){renderCart();$('#drawer').classList.add('open');$('#drawerShade').classList.add('open')}
 function closeCart(){$('#drawer').classList.remove('open');$('#drawerShade').classList.remove('open')}
 $('#cartOpen').onclick=openCart;$('#cartClose').onclick=closeCart;$('#drawerShade').onclick=closeCart;
-$('#addButton').onclick=()=>{const q=Math.max(1,Math.min(10,Number(quantity.value)||1)),key=[breed.value,color,size].join('|'),found=cart.find(x=>x.key===key);if(found)found.quantity=Math.min(10,found.quantity+q);else cart.push({key,breed:breed.value,color,size,quantity:q,unit_price_cents:unitPrice()});saveCart();openCart();$('#toast').classList.add('show');setTimeout(()=>$('#toast').classList.remove('show'),1800)};
+$('#addButton').onclick=()=>{const q=Math.max(1,Math.min(10,Number(quantity.value)||1)),key=[breed.value,color,size].join('|'),found=cart.find(x=>x.breed===breed.value&&x.color===color&&x.size===size);if(found)found.quantity=Math.min(10,found.quantity+q);else cart.push({key,breed:breed.value,color,size,quantity:q,unit_price_cents:unitPrice()});saveCart();openCart();$('#toast').classList.add('show');setTimeout(()=>$('#toast').classList.remove('show'),1800)};
 $('#checkout').onclick=()=>{if(cart.length)location.href='/checkout'};
 // Full-screen iPad viewer: button zoom, one-finger pan, and two-finger pinch.
 let zoomScale=1,panX=0,panY=0,zoomSide='front',touches=new Map(),pinchStart=0,startScale=1,lastPoint=null;

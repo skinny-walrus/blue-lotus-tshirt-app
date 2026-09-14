@@ -92,3 +92,22 @@ def test_required_phone_and_state_selection(tmp_path):
     page = client.get('/checkout').data
     assert b'Complete your order' in page
     assert b'<option value="IL">Illinois</option>' in page
+
+
+def test_both_collections_share_checkout(tmp_path):
+    from app import VIRTUE_ARTWORKS
+    app, client, payload, headers = setup(tmp_path)
+    payload['items'] += [dict(breed=name, color='Ivory', size='M', quantity=1, unit_price_cents=1) for name in VIRTUE_ARTWORKS]
+    with patch('order_requests.smtplib.SMTP') as smtp:
+        smtp.return_value.__enter__.return_value.send_message.return_value = {}
+        response = client.post('/api/checkout', json=payload, headers=headers)
+        assert response.status_code == 200
+        message = smtp.return_value.__enter__.return_value.send_message.call_args.args[0].get_content()
+        for name in VIRTUE_ARTWORKS:
+            assert name in message
+        assert 'left chest' in message and '11 × 14 inches' in message
+        assert '215.65' in message
+    assert b'href="/virtues/"' in client.get('/').data
+    assert b'href="/"' in client.get('/virtues/').data
+    for filename in VIRTUE_ARTWORKS.values():
+        assert client.get('/static/' + filename).status_code == 200

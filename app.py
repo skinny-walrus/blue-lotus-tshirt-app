@@ -54,6 +54,14 @@ ARTWORKS = {
     "Sinhala Hound": "sinhala-hound-loving-kindness.png",
 }
 BREEDS = tuple(ARTWORKS)
+VIRTUE_ARTWORKS = {
+    "Mettā Loving-kindness": "metta-loving-kindness.png",
+    "Karuṇā Compassion": "karuna-softer-heart.png",
+    "Karuṇā Compassion · Crane": "compassion-crane.png",
+    "Muditā Joy": "mudita-joy.png",
+    "Upekkhā Equanimity": "upekkha-equanimity.png",
+}
+CATALOG = {**ARTWORKS, **VIRTUE_ARTWORKS}
 INITIAL_BREED = "Rescue Dog"
 POLICIES = {
     "shipping": ("Shipping", "Each shirt is made to order. Shipping cost and delivery timing will be confirmed with you before your order is accepted."),
@@ -123,11 +131,15 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     @app.get("/")
     def home():
         return render_template(
-            "app.html", breeds=BREEDS, artworks=ARTWORKS, colors=COLORS, sizes=SIZES,
+            "app.html", breeds=BREEDS, artworks=CATALOG, colors=COLORS, sizes=SIZES,
             initial_breed=INITIAL_BREED,
             csrf_token=csrf_token(), base_price_cents=BASE_PRICE_CENTS,
             two_xl_surcharge_cents=TWO_XL_SURCHARGE_CENTS, checkout_configured=checkout_ready(),
         )
+
+    @app.get("/virtues/")
+    def virtues():
+        return render_template("virtues.html")
 
     @app.get("/api/health")
     def health():
@@ -244,24 +256,27 @@ def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
         quantity = int(payload.get("quantity", 1))
     except (TypeError, ValueError):
         abort(400, description="Quantity must be a whole number.")
-    if breed not in ARTWORKS:
-        abort(400, description="Choose an available dog breed.")
+    if breed not in CATALOG:
+        abort(400, description="Choose an available artwork.")
     if color not in COLORS:
         abort(400, description="Choose an available garment color.")
     if size not in SIZES:
         abort(400, description="Choose an available garment size.")
     if not 1 <= quantity <= 10:
         abort(400, description="Quantity must be between 1 and 10.")
-    return {"breed": breed, "color": color, "size": size, "quantity": quantity, "design": "Choose Loving Kindness", "garment": "Comfort Colors 1717"}
+    item = {"breed": breed, "color": color, "size": size, "quantity": quantity, "design": "Choose Loving Kindness", "garment": "Comfort Colors 1717"}
+    if breed in VIRTUE_ARTWORKS:
+        item.update(design=breed, collection="The Virtues Collection", front_placement="Blue Lotus logo, left chest", back_placement=breed + " artwork (11 × 14 inches)")
+    return item
 
 
 def _price_item(selection: dict[str, Any]) -> dict[str, Any]:
     unit = BASE_PRICE_CENTS + (TWO_XL_SURCHARGE_CENTS if selection["size"] == "2XL" else 0)
-    return {**selection, "unit_price_cents": unit, "line_total_cents": unit * selection["quantity"], "artwork": ARTWORKS[selection["breed"]]}
+    return {**selection, "unit_price_cents": unit, "line_total_cents": unit * selection["quantity"], "artwork": CATALOG[selection["breed"]]}
 
 
 def _artwork_path(breed: str) -> Path:
-    return BASE_DIR / "static" / ARTWORKS[breed]
+    return BASE_DIR / "static" / CATALOG[breed]
 
 
 def _init_database(path: Path) -> None:
@@ -322,6 +337,8 @@ def _submit_printful_order(app: Flask, order_id: str, checkout: dict[str, Any], 
     variants = _variant_map(app)
     items = []
     for item in order["items"]:
+        if item["breed"] in VIRTUE_ARTWORKS:
+            raise ValueError("Virtue shirts require manual fulfillment with front left-chest logo and back artwork")
         variant_id = variants.get(f"{item['color']}|{item['size']}")
         if not variant_id and item["color"] == "Gray":
             variant_id = variants.get(f"Grey|{item['size']}")

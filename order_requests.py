@@ -29,6 +29,9 @@ def send_order_email(app, order_id, customer, items, total):
     rows += [f'{key.replace("_", " ").title()}: {value}' for key, value in customer.items() if value]
     rows += ['', 'ITEMS']
     rows += [f'{x["quantity"]} × {x["breed"]} | {x["color"]} | {x["size"]} | ${x["line_total_cents"]/100:.2f}' for x in items]
+    for item in items:
+        if item.get('front_placement'):
+            rows += [f'{item["breed"]}: Front — {item["front_placement"]}; Back — {item["back_placement"]}']
     rows += ['', f'Merchandise subtotal: ${total/100:.2f}', 'Shipping and tax are not included. Contact the customer to confirm availability, final total, and payment arrangements.']
     message.set_content('\n'.join(rows))
     context = ssl.create_default_context()

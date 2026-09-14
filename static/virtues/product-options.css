@@ -1,0 +1,48 @@
+/* Match the Loving Kindness storefront's product controls. */
+.shirt .chest-logo{width:12%;left:57.5%}
+/* Reference mockup: artwork spans about 45% of collar-to-hem height,
+   beginning about 9% below the top of the shirt. */
+.shirt .metta-art{position:absolute;width:36%;height:auto;left:32%;top:17%;filter:none}
+.purchase-row{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;align-items:end;width:100%;max-width:300px;font-family:"Avenir Next","SF Pro Display",system-ui,sans-serif}
+.purchase-row label{margin:0;min-width:0}
+.purchase-row .quantity{appearance:none;box-sizing:border-box;width:100px;max-width:100%;min-width:0;height:49px;border:1px solid #cbd5dc;border-radius:11px;background:#fafcfd;padding:0 42px 0 13px;color:#17365d;font:650 14px "Avenir Next","SF Pro Display",system-ui,sans-serif}
+.purchase-row .add{box-sizing:border-box;min-width:0;width:100%;height:54px;margin-top:24px;padding:0 6px;border:0;border-radius:12px;background:linear-gradient(135deg,#d57922,#e99236);color:#fff;font:900 16px "Avenir Next","SF Pro Display",system-ui,sans-serif;box-shadow:0 9px 20px #d5792233}
+.quantity-stepper{display:flex;width:100px;height:49px;border:1px solid #cbd5dc;border-radius:11px;background:#fafcfd;box-sizing:border-box;overflow:hidden}
+.purchase-row .quantity-stepper .quantity{appearance:textfield;width:36px;height:47px;padding:0;border:0;border-radius:0;text-align:center;flex:1}
+.quantity::-webkit-inner-spin-button,.quantity::-webkit-outer-spin-button{appearance:none;margin:0}
+.quantity-stepper button{flex:0 0 30px;padding:0;border:0;background:transparent;color:#17365d;font-size:20px;cursor:pointer}
+.quantity-stepper button:focus-visible{outline:2px solid #0d4d91;outline-offset:-3px}
+.quantity-stepper button:hover{background:#e6edf3}
+.add:disabled{opacity:.5;cursor:default}
+#cartMessage{font-size:12px;color:#17365d}
+.cart-open{display:block;margin:12px max(25px,calc((100vw - 1130px)/2)) 0 auto;border:0;background:#17365d;color:#fff;border-radius:999px;padding:11px 16px;font-size:13px;font-weight:800}
+.cart-open b{display:inline-grid;place-items:center;min-width:21px;height:21px;margin-left:7px;border-radius:50%;background:#d57922;font-size:11px}
+#cartDialog{width:min(92vw,460px);max-height:85vh;border:1px solid #dbe2e7;border-radius:18px;padding:24px;color:#17365d;box-shadow:0 18px 50px #172c4033}
+#cartDialog::backdrop{background:#12233880}
+.cart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.cart-head h2{font:600 25px Georgia,serif}.cart-head button{border:0;border-radius:50%;width:40px;height:40px;font-size:24px;background:#edf1f3;color:#17365d}
+.cart-item{display:flex;justify-content:space-between;gap:15px;padding:15px 0;border-bottom:1px solid #dbe2e7;font-size:13px}.cart-item p{font-size:12px;color:#687683;margin:5px 0}.cart-item button{border:0;background:none;color:#9a4d43;font-size:11px}
+.cart-total{display:flex;justify-content:space-between;margin-top:20px}.checkout-button{width:100%;height:52px;border:0;border-radius:11px;background:#17365d;color:#fff;font-weight:900}.checkout-button:disabled{opacity:.5}
+.options fieldset{border:0;padding:0;margin:0}
+.options legend{display:block;margin:17px 0 8px;padding:0;color:#354b63;font-size:12px;font-weight:850}
+.options .colors,.options .sizes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;font-family:"Avenir Next","SF Pro Display",system-ui,sans-serif}
+.options .colors button,.options .sizes button{width:auto;height:auto;min-width:0;min-height:46px;border:1px solid #d3dbe0;background:#fff;border-radius:10px;color:#5f6d76;line-height:normal}
+.options .colors button{padding:6px 1px;border-color:transparent}
+.options .colors button[aria-pressed=true],.options .sizes button[aria-pressed=true]{border-color:#0d4d91;box-shadow:inset 0 0 0 1px #0d4d91;background:#eef5fb;color:#0d4d91;outline:none}
+.options .colors button:focus-visible,.options .sizes button:focus-visible{outline:3px solid #bd8138;outline-offset:3px}
+.options .colors i{display:block;width:27px;height:27px;margin:auto;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #aeb9c1}
+.options .colors small{display:block;margin-top:4px;font-size:9px}
+.options .sizes button{padding:8px 12px;font-size:12px;font-weight:850}
+.options .price{display:block;margin:10px 0 0;color:#17365d;font-family:"Avenir Next","SF Pro Display",system-ui,sans-serif;font-size:24px;font-weight:850;line-height:normal}
+.options .price #price{font:inherit;color:inherit}
+.options .price small{font-size:12px;color:#687683;font-weight:500}
+.options .label{display:block;margin:17px 0 8px;color:#354b63;font-size:12px;font-weight:850}
+.options .select{position:relative;font-family:"Avenir Next","SF Pro Display",system-ui,sans-serif}
+.options .select:after{content:"⌄";position:absolute;right:15px;top:9px;font-size:20px;line-height:normal;pointer-events:none;color:#17365d}
+.options .select select{appearance:none;width:100%;height:49px;border:1px solid #cbd5dc;border-radius:11px;background:#fafcfd;padding:0 42px 0 13px;color:#17365d;font-size:14px;font-weight:650}
+header{gap:24px;flex-wrap:wrap}
+.collections{margin-right:auto;gap:24px;align-items:center}
+.collections a{font:600 17px Georgia,serif;padding:9px 0;white-space:nowrap}
+.collections a[aria-current=page]{color:#0d4d91;border-bottom:2px solid #0d4d91}
+.section-nav{gap:20px}
+@media(max-width:950px){.section-nav{width:100%;justify-content:flex-end}.collections{margin-left:auto;margin-right:0}header{row-gap:8px}}
+@media(max-width:580px){header{gap:8px 16px}.brand{margin:auto}.collections{width:100%;margin:0;justify-content:center;gap:18px}.collections a{font-size:15px}.section-nav{justify-content:center;padding-top:5px}.intro>p:last-child{font-size:14px}}
