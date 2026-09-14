@@ -106,7 +106,7 @@ def test_both_collections_share_checkout(tmp_path):
         for name in VIRTUE_ARTWORKS:
             assert name in message
         assert 'left chest' in message and '11 × 14 inches' in message
-        assert '215.65' in message
+        assert f'{(6590 + 2995 * len(VIRTUE_ARTWORKS))/100:.2f}' in message
     assert b'href="/virtues/"' in client.get('/').data
     assert b'href="/"' in client.get('/virtues/').data
     for filename in VIRTUE_ARTWORKS.values():

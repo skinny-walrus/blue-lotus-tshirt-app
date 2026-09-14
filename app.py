@@ -60,6 +60,7 @@ VIRTUE_ARTWORKS = {
     "Karuṇā Compassion · Crane": "compassion-crane.png",
     "Muditā Joy": "mudita-joy.png",
     "Upekkhā Equanimity": "upekkha-equanimity.png",
+    "Upekkhā Equanimity – Koi": "upekkha-equanimity-koi.png",
 }
 CATALOG = {**ARTWORKS, **VIRTUE_ARTWORKS}
 INITIAL_BREED = "Rescue Dog"

@@ -6,9 +6,9 @@ upekkha:{name:'Equanimity',print:'Equanimity',pali:'Upekkhā',meaning:'An even, 
 };
 const colors={Gray:{hex:'#858580',front:'garment-gray-front.jpg',back:'garment-gray-back.jpg'},'Mystic Blue':{hex:'#6486bd',front:'garment-mystic-blue-front.jpg',back:'garment-mystic-blue-back.jpg'},'Ice Blue':{hex:'#7c9da6',front:'garment-gray-front.jpg',back:'garment-gray-back.jpg'},Moss:{hex:'#73765f',image:'garment-moss.png'},Bay:{hex:'#b8bfab',image:'garment-bay.png'},Ivory:{hex:'#e6dcc7',image:'garment-ivory.png'}};
 const sizes=['S','M','L','XL','2XL'];
-const products={metta:{name:'Mettā Loving-kindness',file:'metta-loving-kindness.png'},karuna:{name:'Karuṇā Compassion',file:'karuna-softer-heart.png'},karuna_crane:{name:'Karuṇā Compassion · Crane',file:'compassion-crane.png'},mudita:{name:'Muditā Joy',file:'mudita-joy.png'},upekkha:{name:'Upekkhā Equanimity',file:'upekkha-equanimity.png'}};
-const selections={...virtues,karuna_crane:{...virtues.karuna,name:'Compassion · Crane'}};
-let state={virtue:'metta',color:'Ivory',size:'M',side:'back'};
+const products={metta:{name:'Mettā Loving-kindness',file:'metta-loving-kindness.png'},karuna:{name:'Karuṇā Compassion',file:'karuna-softer-heart.png'},karuna_crane:{name:'Karuṇā Compassion · Crane',file:'compassion-crane.png'},mudita:{name:'Muditā Joy',file:'mudita-joy.png'},upekkha:{name:'Upekkhā Equanimity',file:'upekkha-equanimity.png'},upekkha_koi:{name:'Upekkhā Equanimity – Koi',file:'upekkha-equanimity-koi.png'}};
+const selections={...virtues,upekkha_koi:{...virtues.upekkha,name:'Equanimity – Koi'},karuna_crane:{...virtues.karuna,name:'Compassion · Crane'}};
+let state={virtue:'metta',color:'Gray',size:'M',side:'back'};
 const $=id=>document.getElementById(id);
 const artwork=document.createElement('img');artwork.id='mettaArt';artwork.className='metta-art';artwork.src='/static/metta-loving-kindness.png';artwork.alt='Mettā Loving Kindness artwork with Buddha, lotus, landscape and blessing';$('shirt').append(artwork);
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
