@@ -1,0 +1,6 @@
+/* Shared horizontal alignment for both collections. */
+:root{--collection-width:1450px;--collection-gutter:clamp(18px,5vw,72px)}
+header,.top,.hero,.intro,.product,.virtues,.story-inner,footer:not(.footer){max-width:var(--collection-width);margin-left:auto;margin-right:auto;padding-left:var(--collection-gutter);padding-right:var(--collection-gutter)}
+.notice{background:#17365d;color:#fff;text-align:center;padding:9px 15px;font:400 11px/normal Arial,Helvetica,sans-serif;letter-spacing:.04em}
+.collection-cart,.cart-open{margin-right:max(var(--collection-gutter),calc((100vw - var(--collection-width))/2 + var(--collection-gutter)))}
+@media(max-width:600px){:root{--collection-gutter:16px}.notice{font-size:9px}}
