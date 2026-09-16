@@ -14,7 +14,7 @@ const artwork=document.createElement('img');artwork.id='mettaArt';artwork.classN
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 let cart=[];try{const saved=JSON.parse(localStorage.getItem('blueLotusCart')||'[]');if(Array.isArray(saved))cart=saved.filter(x=>x&&typeof x.breed==='string'&&Object.hasOwn(colors,x.color)&&sizes.includes(x.size)&&Number.isInteger(x.quantity)&&x.quantity>=1&&x.quantity<=10)}catch{}
 function quantity(){return Number($('quantity').value)}
-function priceFor(size){return size==='2XL'?3295:2995}
+function priceFor(size){return size==='2XL'?3800:3500}
 function update(){
  const v=selections[state.virtue],c=colors[state.color],front=state.side==='front';
  $('virtue').value=state.virtue;$('productName').textContent=v.name+' Tee';$('previewTitle').textContent=v.name+' · '+state.color;
@@ -30,7 +30,7 @@ function update(){
  if(product){artwork.src='/static/previews/'+product.file.replace(/\.png$/,'.webp');artwork.alt=product.name+' artwork and blessing'}
  $('chestLogo').hidden=!front;$('printArea').hidden=front||Boolean(product);artwork.hidden=front||!product;$('placement').textContent=front?'Front · Blue logo on wearer’s left chest':product?'Back · '+v.pali+' artwork':'Back · Planned virtue artwork placement';
  $('frontButton').setAttribute('aria-pressed',String(front));$('backButton').setAttribute('aria-pressed',String(!front));
- $('price').textContent=state.size==='2XL'?'$32.95':'$29.95';
+ $('price').textContent=state.size==='2XL'?'$38.00':'$35.00';
  const available=Boolean(product),valid=$('quantity').checkValidity();$('addButton').disabled=!available||!valid;$('addButton').textContent=available?'Add to cart · '+money(priceFor(state.size)*(valid?quantity():1)):'Artwork coming soon';$('availability').textContent=available?'Shipping and tax will be confirmed by email. No payment is collected here.':'This virtue’s artwork is still in development.';
  document.querySelectorAll('[data-color]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.color===state.color)));
  document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.size===state.size)));

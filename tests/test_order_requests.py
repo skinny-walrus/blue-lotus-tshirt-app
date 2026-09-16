@@ -22,7 +22,7 @@ def test_email_request_price_idempotency_and_private_confirmation(tmp_path):
     with patch('order_requests.send_order_email') as send:
         response=client.post('/api/checkout',json=payload,headers=headers)
         assert response.status_code==200
-        assert send.call_args.args[-1]==6590
+        assert send.call_args.args[-1]==7600
         assert client.post('/api/checkout',json=payload,headers=headers).status_code==200
         send.assert_called_once()
     url=response.json['checkout_url']
@@ -106,7 +106,7 @@ def test_both_collections_share_checkout(tmp_path):
         for name in VIRTUE_ARTWORKS:
             assert name in message
         assert 'left chest' in message and '11 × 14 inches' in message
-        assert f'{(6590 + 2995 * len(VIRTUE_ARTWORKS))/100:.2f}' in message
+        assert f'{(7600 + 3500 * len(VIRTUE_ARTWORKS))/100:.2f}' in message
     assert b'href="/virtues/"' in client.get('/').data
     assert b'href="/"' in client.get('/virtues/').data
     for filename in VIRTUE_ARTWORKS.values():

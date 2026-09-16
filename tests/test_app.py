@@ -34,7 +34,7 @@ def test_storefront_and_health(tmp_path):
     assert b"Love In Action" in page.data
     assert b"Wear the companion who taught you how" in page.data
     assert b"All profits from this collection support" in page.data
-    assert b"$29.95" in page.data
+    assert b"$35.00" in page.data
     assert b"moss-shirt-back.png" not in page.data
     assert b"useMoss" not in page.data
     assert b"hue-rotate(198deg)" not in page.data
