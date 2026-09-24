@@ -111,3 +111,21 @@ def test_both_collections_share_checkout(tmp_path):
     assert b'href="/"' in client.get('/virtues/').data
     for filename in VIRTUE_ARTWORKS.values():
         assert client.get('/static/' + filename).status_code == 200
+
+
+def test_caps_share_checkout_and_enforce_options(tmp_path):
+    from app import CAP_ARTWORKS
+    app, client, payload, headers = setup(tmp_path)
+    caps = [dict(breed=name, color='Stone', size='One size fits all', quantity=1, unit_price_cents=1) for name in CAP_ARTWORKS]
+    for bad in (caps[0] | {'color': 'Gray'}, caps[0] | {'size': '2XL'}):
+        assert client.post('/api/checkout', json=payload | {'items': [bad]}, headers=headers).status_code == 400
+    payload['items'] += caps
+    with patch('order_requests.send_order_email') as send:
+        assert client.post('/api/checkout', json=payload, headers=headers).status_code == 200
+        assert send.call_args.args[-1] == 14600
+        for item in send.call_args.args[-2][-2:]:
+            assert item['garment'] == 'Cap'
+            assert item['unit_price_cents'] == 3500
+            assert 'back_placement' not in item
+    for filename in CAP_ARTWORKS.values():
+        assert client.get('/static/' + filename).status_code == 200

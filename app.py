@@ -62,7 +62,8 @@ VIRTUE_ARTWORKS = {
     "Upekkhā Equanimity": "upekkha-equanimity.png",
     "Upekkhā Equanimity – Koi": "upekkha-equanimity-koi.png",
 }
-CATALOG = {**ARTWORKS, **VIRTUE_ARTWORKS}
+CAP_ARTWORKS = {"Mettā Loving-kindness Cap": "loving-kindness-cap.png", "Karuṇā Compassion Cap": "compassion-cap.png"}
+CATALOG = {**ARTWORKS, **VIRTUE_ARTWORKS, **CAP_ARTWORKS}
 INITIAL_BREED = "Rescue Dog"
 POLICIES = {
     "shipping": ("Shipping", "Each shirt is made to order. Shipping cost and delivery timing will be confirmed with you before your order is accepted."),
@@ -259,15 +260,17 @@ def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
         abort(400, description="Quantity must be a whole number.")
     if breed not in CATALOG:
         abort(400, description="Choose an available artwork.")
-    if color not in COLORS:
+    if color not in (("Stone",) if breed in CAP_ARTWORKS else COLORS):
         abort(400, description="Choose an available garment color.")
-    if size not in SIZES:
+    if size not in (("One size fits all",) if breed in CAP_ARTWORKS else SIZES):
         abort(400, description="Choose an available garment size.")
     if not 1 <= quantity <= 10:
         abort(400, description="Quantity must be between 1 and 10.")
     item = {"breed": breed, "color": color, "size": size, "quantity": quantity, "design": "Choose Loving Kindness", "garment": "Comfort Colors 1717"}
     if breed in VIRTUE_ARTWORKS:
         item.update(design=breed, collection="The Virtues Collection", front_placement="Blue Lotus logo, left chest", back_placement=breed + " artwork (11 × 14 inches)")
+    if breed in CAP_ARTWORKS:
+        item.update(design=breed, collection="The Virtues Collection", garment="Cap", product_type="cap")
     return item
 
 
@@ -338,7 +341,7 @@ def _submit_printful_order(app: Flask, order_id: str, checkout: dict[str, Any], 
     variants = _variant_map(app)
     items = []
     for item in order["items"]:
-        if item["breed"] in VIRTUE_ARTWORKS:
+        if item["breed"] in VIRTUE_ARTWORKS or item["breed"] in CAP_ARTWORKS:
             raise ValueError("Virtue shirts require manual fulfillment with front left-chest logo and back artwork")
         variant_id = variants.get(f"{item['color']}|{item['size']}")
         if not variant_id and item["color"] == "Gray":
