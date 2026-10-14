@@ -39,7 +39,6 @@ ARTWORKS = {
     "Beagle": "beagle-loving-kindness.png",
     "Boston Terrier": "boston-terrier-loving-kindness.png",
     "Dachshund": "dachshund-loving-kindness.png",
-    "Fat Cat Rescue": "fat-cat-rescue-loving-kindness.png",
     "French Bulldog": "french-bulldog-loving-kindness.png",
     "German Shepherd": "german-shepherd-loving-kindness.png",
     "Golden Retriever": "golden-retriever-loving-kindness.png",
@@ -47,6 +46,7 @@ ARTWORKS = {
     "Labradoodle": "labradoodle-loving-kindness.png",
     "Labrador Retriever": "labrador-retriever-loving-kindness.png",
     "Lhasa Apso": "lhasa-apso-loving-kindness.png",
+    "Living and Dying": "living-and-dying.png",
     "Norwich Terrier": "norwich-terrier-loving-kindness.png",
     "Pit Bull": "pit-bull-loving-kindness.png",
     "Rescue Dog": "rescue-dog-loving-kindness.png",
@@ -142,6 +142,12 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     @app.get("/virtues/")
     def virtues():
         return render_template("virtues.html")
+
+    @app.get("/malas/")
+    def malas():
+        import json
+        products = json.loads((BASE_DIR / "malas.json").read_text())
+        return render_template("malas.html", products=products)
 
     @app.get("/api/health")
     def health():

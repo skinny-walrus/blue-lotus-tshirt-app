@@ -1,0 +1,38 @@
+[
+  {
+    "id": "mala-journey",
+    "name": "The Journey Mala Bracelet",
+    "collection": "Malas",
+    "type": "Bracelet",
+    "image": "assets/mala-journey.png",
+    "imageAlt": "The Journey mala bead bracelet with lotus charm, recreated from the volunteer design.",
+    "description": "Walk with courage. Matte black onyx, warm tiger’s eye, and smoky quartz frame a silver-tone lotus charm. Wear it as a reminder to stay grounded, move forward with intention, and let go of what no longer serves you.",
+    "price": null,
+    "productUrl": "",
+    "published": false
+  },
+  {
+    "id": "mala-heart",
+    "name": "The Heart Mala Bracelet",
+    "collection": "Malas",
+    "type": "Bracelet",
+    "image": "assets/mala-heart.png",
+    "imageAlt": "The Heart mala bead bracelet with lotus charm, recreated from the volunteer design.",
+    "description": "Live with compassion. Rose quartz, amethyst, and moonstone pair with a rose-gold-tone lotus centerpiece. A gentle reminder to keep your heart open, be kind to yourself, and share compassion with the world.",
+    "price": null,
+    "productUrl": "",
+    "published": false
+  },
+  {
+    "id": "mala-way",
+    "name": "The Way Mala Bracelet",
+    "collection": "Malas",
+    "type": "Bracelet",
+    "image": "assets/mala-way.png",
+    "imageAlt": "The Way mala bead bracelet with lotus charm, recreated from the volunteer design.",
+    "description": "Choose loving-kindness. Black onyx, labradorite, clear quartz, and wood surround an engraved silver-tone charm. A daily reminder to pause, be present, and walk your path with an open heart.",
+    "price": null,
+    "productUrl": "",
+    "published": false
+  }
+]
