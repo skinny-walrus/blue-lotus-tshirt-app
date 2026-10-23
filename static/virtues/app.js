@@ -31,7 +31,7 @@ function update(){
  $('garment').style.filter=state.color==='Ivory'?'none':'url(#garmentTint)';
  const product=products[state.virtue];
  if(product&&!cap){artwork.src='/static/previews/'+product.file.replace(/\.png$/,'.webp');artwork.alt=product.name+' artwork and blessing'}
- $('chestLogo').hidden=!front;$('printArea').hidden=front||Boolean(product);artwork.hidden=front||!product;$('placement').textContent=front?'Front · Blue logo on wearer’s left chest':product?'Back · '+v.pali+' artwork':'Back · Planned virtue artwork placement';
+ $('chestLogo').hidden=!front;$('printArea').hidden=front||Boolean(product);artwork.hidden=front||!product;$('placement').textContent=front?'Front · Bhante Sujatha logo on wearer’s left chest':product?'Back · '+v.pali+' artwork':'Back · Planned virtue artwork placement';
  $('frontButton').setAttribute('aria-pressed',String(front));$('backButton').setAttribute('aria-pressed',String(!front));
  $('price').textContent=state.size==='2XL'?'$38.00':'$35.00';
  const available=Boolean(product),valid=$('quantity').checkValidity();$('addButton').disabled=!available||!valid;$('addButton').textContent=available?'Add to cart · '+money(priceFor(state.size)*(valid?quantity():1)):'Artwork coming soon';$('availability').textContent=available?'Shipping and tax will be confirmed by email. No payment is collected here.':'This virtue’s artwork is still in development.';
@@ -39,7 +39,7 @@ function update(){
  $('capPreview').src=cap?'/static/'+product.file+'?v=correct-scale':'';$('capPreview').alt=cap?v.name+' cap in Stone':'';
  document.querySelector('.toggle').hidden=cap;
  $('logoCaption').hidden=cap;
- document.querySelector('.product-info').textContent=cap?'Stone cap · One size fits all':'Comfort Colors® garment-dyed cotton. Virtue artwork on the back. Blue Lotus on the heart side.';
+ document.querySelector('.product-info').textContent=cap?'Stone cap · One size fits all':'Comfort Colors® garment-dyed cotton. Virtue artwork on the back. Bhante Sujatha logo on the heart side.';
  $('colors').hidden=cap;$('sizes').hidden=cap;
  $('capColor').hidden=!cap;$('capSize').hidden=!cap;
  if(cap){$('placement').textContent='Front · '+v.name+' cap';$('price').textContent='$35.00';$('addButton').textContent='Add to cart · '+money(3500*(valid?quantity():1))}

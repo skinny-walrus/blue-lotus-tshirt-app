@@ -21,7 +21,7 @@ def mail_ready(app):
 
 def send_order_email(app, order_id, customer, items, total):
     message = EmailMessage()
-    message['Subject'] = f'Blue Lotus order request {order_id[:8].upper()}'
+    message['Subject'] = f'Bhante Sujatha order request {order_id[:8].upper()}'
     message['From'] = app.config['ORDER_EMAIL_FROM']
     message['To'] = app.config['ORDER_EMAIL_TO']
     message['Reply-To'] = customer['email']

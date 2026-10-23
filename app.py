@@ -274,7 +274,7 @@ def _validate_selection(payload: dict[str, Any]) -> dict[str, Any]:
         abort(400, description="Quantity must be between 1 and 10.")
     item = {"breed": breed, "color": color, "size": size, "quantity": quantity, "design": "Choose Loving Kindness", "garment": "Comfort Colors 1717"}
     if breed in VIRTUE_ARTWORKS:
-        item.update(design=breed, collection="The Virtues Collection", front_placement="Blue Lotus logo, left chest", back_placement=breed + " artwork (11 × 14 inches)")
+        item.update(design=breed, collection="The Virtues Collection", front_placement="Bhante Sujatha logo, left chest", back_placement=breed + " artwork (11 × 14 inches)")
     if breed in CAP_ARTWORKS:
         item.update(design=breed, collection="The Virtues Collection", garment="Cap", product_type="cap")
     return item
